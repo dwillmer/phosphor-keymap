@@ -4,7 +4,7 @@ phosphor-keymap
 [![Build Status](https://travis-ci.org/phosphorjs/phosphor-keymap.svg)](https://travis-ci.org/phosphorjs/phosphor-keymap?branch=master)
 [![Coverage Status](https://coveralls.io/repos/phosphorjs/phosphor-keymap/badge.svg?branch=master&service=github)](https://coveralls.io/github/phosphorjs/phosphor-keymap?branch=master)
 
-A module for cross-browser keyboard support.
+A module for cross-browser keyboard shortcut support.
 
 [API Docs](http://phosphorjs.github.io/phosphor-keymap/api)
 
@@ -57,7 +57,6 @@ Supported Runtimes
 The runtime versions which are currently *known to work* are listed below.
 Earlier versions may also work, but come with no guarantees.
 
-- Node 0.12.7+
 - IE 11+
 - Firefox 32+
 - Chrome 38+
