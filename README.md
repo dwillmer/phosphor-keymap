@@ -15,7 +15,7 @@ Package Install
 - [node](https://nodejs.org)
 
 ```bash
-npm install --save phosphor-command
+npm install --save phosphor-keymap
 ```
 
 Source Build
@@ -26,8 +26,8 @@ Source Build
 - [node](http://nodejs.org)
 
 ```bash
-git clone https://github.com/phosphorjs/phosphor-command.git
-cd phosphor-command
+git clone https://github.com/phosphorjs/phosphor-keymap.git
+cd phosphor-keymap
 npm install
 ```
 
