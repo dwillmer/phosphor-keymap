@@ -80,6 +80,44 @@ describe('phosphor-keymap', () => {
 
       });
 
+      it('should not emit with invalid keycode', () => {
+
+          var options = {
+              keycodeSetting: 'mozilla',
+              manager: () => { console.error('Should not be called'); }
+          };
+          var km = new KeymapManager(options);
+
+          var testId = 'test:id';
+          var testInput = 'Ctrl-L';
+          var sequence = {
+            input: testInput,
+            id: testId
+          };
+
+          var preRegistration = km.hasShortcut(testInput);
+          expect(preRegistration).to.be(false);
+
+          km.registerSequence(sequence);
+
+          var postRegistration = km.hasShortcut(testInput);
+          expect(postRegistration).to.be(true);
+
+          var id = '';
+          var handler = (sender: any, value: string) => {
+            id = value;
+          };
+          km.commandRequested.connect(handler, this);
+
+          expect(id).to.be('');
+
+          var keyEvent = genKeyboardEvent({ keyCode: 1000, ctrlKey: true });
+          document.dispatchEvent(keyEvent);
+
+          expect(id).to.be('');
+
+      });
+
     });
 
     describe('#modifiers mozilla', () => {
@@ -161,6 +199,44 @@ describe('phosphor-keymap', () => {
         var postRegistration = km.hasShortcut(testInput);
         expect(postRegistration).to.be(true);
 
+        var falseId = "should:not:be:fired";
+        var seqRepeat = {
+          input: testInput,
+          id: falseId
+        }
+        var regSeqRepeat = km.registerSequence(seqRepeat);
+        expect(regSeqRepeat).to.be(false);
+
+        var id = '';
+        var handler = (sender: any, value: string) => {
+            id = value;
+        };
+        km.commandRequested.connect(handler, this);
+
+        expect(id).to.be('');
+
+        var keyEvent = genKeyboardEvent({ keyCode: 76, ctrlKey: true, altKey: true});
+        document.dispatchEvent(keyEvent);
+
+        expect(id).to.be(testId);
+
+
+      });
+
+    });
+
+    describe('#ie', () => {
+
+      it('should not have any shortcuts set', () => {
+
+        var options = {
+          keycodeSetting: 'ie',
+          manager: () => { console.error('Should not be called'); }
+        };
+        var km = new KeymapManager(options);
+
+        var dummyReg = km.hasShortcut('Ctrl-X');
+        expect(dummyReg).to.be(false);
 
       });
 

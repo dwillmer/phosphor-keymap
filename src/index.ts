@@ -203,16 +203,17 @@ class KeymapManager implements IKeymapManager {
       var key = <number>(event.keyCode);
       var mods = that._getModifierStringForEvent(event);
       var keyStr = that._getKeyChars(key);
+      if(keyStr === undefined) { 
+        console.error('Keycode not found: ' + key.toString());
+        return;
+      }
       var joinedKey = mods + keyStr;
-
-      console.log('KEYDOWN REGISTERED: ' + joinedKey);
 
       if(joinedKey in that._keySequenceMap) {
         var command = that._keySequenceMap[joinedKey];
         console.log('ID found: ' + command);
         that.commandRequested.emit(command);
       }
-
 
     });
 
