@@ -33,8 +33,9 @@
     "lib/index.d.ts"
   ],
   "keywords": [
-    "command",
-    "commands"
+    "keymap",
+    "keyboard",
+    "key"
   ],
   "author": "S. Chris Colbert <sccolbert@gmail.com>",
   "license": "BSD-3-Clause",
