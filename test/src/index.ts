@@ -122,7 +122,7 @@ describe('phosphor-keymap', () => {
 
     describe('#modifiers mozilla', () => {
 
-      it('should register permutations of ctrl-alt-shift', () => {
+      it('should recognise permutations of modifiers', () => {
 
         var options = {
             keycodeSetting: 'mozilla',
@@ -220,6 +220,51 @@ describe('phosphor-keymap', () => {
 
         expect(id).to.be(testId);
 
+      });
+
+    });
+
+    describe('#shortcutForCommand', () => {
+
+      it('should return the shortcut for a given command', () => {
+
+        var options = {
+            keycodeSetting: 'mozilla',
+            manager: () => { console.error('Should not be called'); }
+        };
+        var km = new KeymapManager(options);
+
+        var firstId = "id:first";
+        var firstInput = "Ctrl-F";
+        var firstSeq = {
+          input: firstInput,
+          id: firstId
+        };
+
+        var preRegistration = km.hasShortcut(firstInput);
+        expect(preRegistration).to.be(false);
+
+        var regFirst = km.registerSequence(firstSeq);
+        expect(regFirst).to.be(true);
+
+        var secondId = "id:second";
+        var secondInput = "Ctrl-s";
+        var secondSeq = {
+          input: secondInput,
+          id: secondId
+        };
+
+        var preRegistration = km.hasShortcut(secondInput);
+        expect(preRegistration).to.be(false);
+
+        var regSecond = km.registerSequence(secondSeq);
+        expect(regSecond).to.be(true);
+
+        var firstResult = km.shortcutForCommand(firstId);
+        expect(firstResult).to.be(firstInput);
+
+        var secondResult = km.shortcutForCommand(secondId);
+        expect(secondResult).to.be(secondInput);
 
       });
 

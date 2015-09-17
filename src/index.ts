@@ -13,7 +13,7 @@ import {
 
 
 /**
- * Maps a given key sequence to an identifier.
+ * Groups a given key sequence with a command identifier.
  */
 export 
 interface IKeySequence {
@@ -29,17 +29,32 @@ interface IKeySequence {
 }
 
 
+/**
+ * Defines the behaviour of a keymap manager.
+ */
 export
 interface IKeymapManager {
   /**
-   * Registers a key sequence with the manager
+   * Registers a key sequence with the manager.
    */
   registerSequence(key: IKeySequence): boolean;
 
   /**
-   * 
+   * A signal which fires when the keymap manager receives a 
+   * key sequence which corresponds to a registered command id.
    */
+  commandRequested: ISignal<IKeymapManager, string>;
 
+  /**
+   * Returns a boolean to show whether a given keyboard shortcut
+   * is already in use.
+   */
+  hasShortcut(value: string): boolean;
+
+  /**
+   * Returns the keyboard shortcut for a given command id.
+   */
+  shortcutForCommand(id: string): string;
 }
 
 
@@ -146,15 +161,18 @@ class KeymapManager implements IKeymapManager {
       return false;
     }
 
-    console.log('REGISTERING: ' + input);
+    this._commandToKeySequenceMap[sequence.id] = sequence.input;
     this._keySequenceMap[input] = sequence.id;
     return true;
   }
 
   hasShortcut(value: string): boolean {
     var input = this._mapKeyFromUserString(value);
-    console.log('has shortcut map key: ' + input);
     return input in this._keySequenceMap;
+  }
+
+  shortcutForCommand(id: string): string {
+    return this._commandToKeySequenceMap[id];
   }
 
   private _mapKeyFromUserString(input: string): string {
@@ -214,12 +232,11 @@ class KeymapManager implements IKeymapManager {
         console.log('ID found: ' + command);
         that.commandRequested.emit(command);
       }
-
     });
-
   }
 
   private _keycodeModifications: StringMap = {};
   private _keySequenceMap: StringMap = {};
+  private _commandToKeySequenceMap: StringMap = {};
   private _commandManager: any;
 }
