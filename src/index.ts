@@ -318,7 +318,11 @@ class KeymapManager implements IKeymapManager, IDisposable {
     var reduced = this._matchingSelectorMap(joinedKey);
 
     for (var prop in reduced) {
-      if (matchesSelector(<Element>(document.activeElement), prop)) {
+      var currNode = document.activeElement; // TODO
+      while (currNode !== null && !matchesSelector(currNode, prop)) {
+        currNode = currNode.parentElement; // TODO
+      }
+      if(currNode) {
         this.commandRequested.emit(reduced[prop][joinedKey]);
       }
     }
