@@ -92,6 +92,9 @@ type StringMap = { [s: string]: string; };
 type SelectorMap = { [s: string]: StringMap };
 
 
+/**
+ * Cross-browser implementation of matches / matchesSelector.
+ */
 var protoMatchFunc: Function = (() => {
   var proto = Element.prototype as any;
   return (
@@ -109,14 +112,15 @@ var protoMatchFunc: Function = (() => {
   );
 })();
 
-
+/**
+ * Determines whether the element matches the css selector string.
+ */
 function matchesSelector(elem: Element, selector: string): boolean {
   return protoMatchFunc.call(elem, selector);
 }
 
 /**
  * A convenience implementation of IKeymapManager
- *
  */
 export 
 class KeymapManager implements IKeymapManager {
@@ -177,10 +181,19 @@ class KeymapManager implements IKeymapManager {
     this._bindEvents();
   }
 
+  /** 
+   * A signal emitted when a command is requested.
+   *
+   * #### Notes
+   * This is a pure delegate to the [[commandRequestedSignal]].
+   */
   get commandRequested(): ISignal<KeymapManager, string> {
     return KeymapManager.commandRequestedSignal.bind(this);
   }
 
+  /**
+   * Registers the key sequence with the keymap manager.
+   */
   registerSequence(sequence: IKeySequence): boolean {
     var scope = sequence.cssScope || '*';
     var input = this._mapKeyFromUserString(sequence.input);
@@ -199,11 +212,18 @@ class KeymapManager implements IKeymapManager {
     return true;
   }
 
+  /**
+   * Checks whether a given shortcut has been registered in a given scope.
+   */
   hasShortcut(value: string, scope: string): boolean {
     var input = this._mapKeyFromUserString(value);
     return scope in this._scopeSequenceMap && input in this._scopeSequenceMap[scope];
   }
 
+  /**
+   * Given a command id and a scope, returns the registered key sequence
+   * to trigger the command.
+   */
   shortcutForCommand(id: string, scope:string): string {
     var map = this._scopeCommandMap[scope];
     if(map) {
