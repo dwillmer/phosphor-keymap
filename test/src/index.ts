@@ -19,20 +19,20 @@ KeymapManager, IKeySequence
  */
 var genKeyboardEvent = function(options: any): KeyboardEvent {
   var keyEvent = <KeyboardEvent>document.createEvent("KeyboardEvent");
-  var initMethod = typeof keyEvent.initKeyboardEvent !== 'undefined' ? "initKeyboardEvent" : "initKeyEvent";
-  keyEvent[initMethod](
+  var initMethod: any = typeof keyEvent.initKeyboardEvent !== 'undefined' ? "initKeyboardEvent" : "initKeyEvent";
+  (<any>keyEvent)[initMethod](
     "keydown",
-    <boolean>(options.bubbles) || true,
-    <boolean>(options.cancelable) || true,
-    <Window>window,
-    <boolean>(options.ctrlKey) || false,
-    <boolean>(options.altKey) || false,
-    <boolean>(options.shiftKey) || false,
-    <boolean>(options.metaKey) || false,
-    <number>(options.keyCode),
-    <number>(options.charCodeArgs) || 0
+    options.bubbles || true,
+    options.cancelable || true,
+    window,
+    options.ctrlKey || false,
+    options.altKey || false,
+    options.shiftKey || false,
+    options.metaKey || false,
+    options.keyCode,
+    options.charCodeArgs || 0
   );
-  return <KeyboardEvent>keyEvent;
+  return keyEvent;
 }
 
 
