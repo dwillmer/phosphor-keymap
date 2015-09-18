@@ -70,7 +70,7 @@ describe('phosphor-keymap', () => {
         expect(id).to.be('');
 
         var keyEvent = genKeyboardEvent({ keyCode: 59, ctrlKey: true });
-        document.dispatchEvent(keyEvent);
+        document.body.dispatchEvent(keyEvent);
 
         expect(id).to.be(testId);
         disposable.dispose();
@@ -110,7 +110,7 @@ describe('phosphor-keymap', () => {
         expect(id).to.be('');
 
         var keyEvent = genKeyboardEvent({ keyCode: 69, ctrlKey: true, altKey: true });
-        document.dispatchEvent(keyEvent);
+        document.body.dispatchEvent(keyEvent);
         expect(id).to.be('');
 
         disposable.dispose();
@@ -146,7 +146,7 @@ describe('phosphor-keymap', () => {
           expect(id).to.be('');
 
           var keyEvent = genKeyboardEvent({ keyCode: 1000, ctrlKey: true });
-          document.dispatchEvent(keyEvent);
+          document.body.dispatchEvent(keyEvent);
 
           expect(id).to.be('');
           disposable.dispose();
@@ -247,7 +247,7 @@ describe('phosphor-keymap', () => {
         expect(id).to.be('');
 
         var keyEvent = genKeyboardEvent({ keyCode: 76, ctrlKey: true, altKey: true});
-        document.dispatchEvent(keyEvent);
+        document.body.dispatchEvent(keyEvent);
 
         expect(id).to.be(testId);
 

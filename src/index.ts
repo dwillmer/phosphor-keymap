@@ -306,7 +306,15 @@ class KeymapManager implements IKeymapManager, IDisposable {
    * is called in response to keydown events on document. It 
    * should not be called directly by user code.
    */
-  handleEvent(event: KeyboardEvent) {
+  handleEvent(event: Event) {
+    switch (event.type) {
+      case 'keydown':
+        this._evtKeyDown(event as KeyboardEvent);
+        break;
+    }
+  }
+
+  private _evtKeyDown(event: KeyboardEvent): void {
     var stop = false;
     var key = <number>(event.keyCode);
     var mods = this._getModifierStringForEvent(event);
@@ -319,11 +327,11 @@ class KeymapManager implements IKeymapManager, IDisposable {
     var reduced = this._matchingSelectorMap(joinedKey);
 
     for (var prop in reduced) {
-      var currNode = document.activeElement; // TODO
-      while (currNode !== null && !matchesSelector(currNode, prop)) {
-        currNode = currNode.parentElement; // TODO
+      var currElem = event.target as Element;
+      while (currElem !== null && !matchesSelector(currElem, prop)) {
+        currElem = currElem.parentElement; // TODO
       }
-      if (currNode) {
+      if (currElem) {
         this.commandRequested.emit(reduced[prop][joinedKey]);
         stop = true;
       }
