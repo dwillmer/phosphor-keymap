@@ -176,7 +176,7 @@ var MODIFIER_KEYS: string[] = ['ctrl', 'alt', 'shift'];
  * A convenience implementation of IKeymapManager
  */
 export 
-class KeymapManager implements IKeymapManager {
+class KeymapManager implements IKeymapManager, IDisposable {
   /**
    * A signal emitted when the [[commandRequested]]
    */
@@ -204,6 +204,22 @@ class KeymapManager implements IKeymapManager {
    */
   get commandRequested(): ISignal<KeymapManager, string> {
     return KeymapManager.commandRequestedSignal.bind(this);
+  }
+
+  /**
+   * Returns whether this manager has already been disposed.
+   */
+  get isDisposed(): boolean {
+    return this._scopeSequenceMap === undefined;
+  }
+
+  /**
+   * Unbind the event handler and clean out the state.
+   */
+  dispose(): void {
+    this._unbindEvents();
+    this._scopeSequenceMap === undefined;
+    this._scopeCommandMap === undefined;
   }
 
   /**
@@ -280,6 +296,34 @@ class KeymapManager implements IKeymapManager {
     }
   }
 
+  /**
+   * Handle the DOM events for the Keymap Manager
+   *
+   * @param event - The DOM event sent to the keymap manager.
+   *
+   * #### Notes
+   * This method implements the DOM 'EventListener' interface and
+   * is called in response to keydown events on document. It 
+   * should not be called directly by user code.
+   */
+  handleEvent(event: KeyboardEvent) {
+    var key = <number>(event.keyCode);
+    var mods = this._getModifierStringForEvent(event);
+    var keyStr = this._getKeyChars(key);
+    if (keyStr === undefined) {
+      console.error('Keycode not found: ' + key.toString());
+      return;
+    }
+    var joinedKey = mods + keyStr;
+    var reduced = this._matchingSelectorMap(joinedKey);
+
+    for (var prop in reduced) {
+      if (matchesSelector(<Element>(document.activeElement), prop)) {
+        this.commandRequested.emit(reduced[prop][joinedKey]);
+      }
+    }
+  }
+
   private _mapKeyFromUserString(input: string): string {
     var lowerInput = input.toLowerCase();
     var seqItems = lowerInput.split('-');
@@ -319,10 +363,6 @@ class KeymapManager implements IKeymapManager {
     return result;
   }
 
-  private _cssMatches(value: string): boolean {
-    return matchesSelector(document.activeElement, value);
-  }
-
   private _matchingSelectorMap(value: string): SelectorMap {
     var result: SelectorMap = {};
 
@@ -340,26 +380,11 @@ class KeymapManager implements IKeymapManager {
   }
 
   private _bindEvents(): void {
-    var that = this;
-    document.addEventListener("keydown", function(event: KeyboardEvent) {
-      
-      var key = <number>(event.keyCode);
-      var mods = that._getModifierStringForEvent(event);
-      var keyStr = that._getKeyChars(key);
-      if (keyStr === undefined) { 
-        console.error('Keycode not found: ' + key.toString());
-        return;
-      }
-      var joinedKey = mods + keyStr;
+    document.addEventListener("keydown", this);
+  }
 
-      var reduced = that._matchingSelectorMap(joinedKey);
-
-      for (var prop in reduced) {
-        if (that._cssMatches(prop)) {
-          that.commandRequested.emit(reduced[prop][joinedKey]);
-        }
-      }
-    });
+  private _unbindEvents(): void {
+    document.removeEventListener("keydown", this);
   }
 
   private _keycodeModifications: StringMap = {};

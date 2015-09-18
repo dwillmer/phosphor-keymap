@@ -74,6 +74,7 @@ describe('phosphor-keymap', () => {
 
         expect(id).to.be(testId);
         disposable.dispose();
+        km.dispose();
 
       });
 
@@ -113,6 +114,7 @@ describe('phosphor-keymap', () => {
         expect(id).to.be('');
 
         disposable.dispose();
+        km.dispose();
 
       });
 
@@ -148,6 +150,7 @@ describe('phosphor-keymap', () => {
 
           expect(id).to.be('');
           disposable.dispose();
+          km.dispose();
 
       });
 
@@ -200,6 +203,7 @@ describe('phosphor-keymap', () => {
 
         regSeq.dispose();
         sequenceDisp.dispose();
+        km.dispose();
 
       });
 
@@ -249,6 +253,7 @@ describe('phosphor-keymap', () => {
 
         regSeq.dispose();
         regBindingRepeat.dispose();
+        km.dispose();
 
       });
 
@@ -295,6 +300,7 @@ describe('phosphor-keymap', () => {
         regFirst.dispose();
         expect(regFirst.isDisposed).to.be(true);
         regSecond.dispose();
+        km.dispose();
 
       });
 
@@ -307,6 +313,7 @@ describe('phosphor-keymap', () => {
         var km = new KeymapManager();
         var dummyReg = km.hasShortcut('Ctrl-X', '*');
         expect(dummyReg).to.be(false);
+        km.dispose();
 
       });
 
