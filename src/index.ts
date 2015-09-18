@@ -329,7 +329,7 @@ class KeymapManager implements IKeymapManager, IDisposable {
     for (var prop in reduced) {
       var currElem = event.target as Element;
       while (currElem !== null && !matchesSelector(currElem, prop)) {
-        currElem = currElem.parentElement; // TODO
+        currElem = currElem.parentElement;
       }
       if (currElem) {
         this.commandRequested.emit(reduced[prop][joinedKey]);
