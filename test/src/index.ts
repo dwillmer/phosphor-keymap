@@ -57,12 +57,12 @@ describe('phosphor-keymap', () => {
             id: testId
         };
 
-        var preRegistration = km.hasShortcut(testInput);
+        var preRegistration = km.hasShortcut(testInput, '*');
         expect(preRegistration).to.be(false);
 
         km.registerSequence(sequence);
 
-        var postRegistration = km.hasShortcut(testInput);
+        var postRegistration = km.hasShortcut(testInput, '*');
         expect(postRegistration).to.be(true);
 
         var id = '';
@@ -77,6 +77,47 @@ describe('phosphor-keymap', () => {
         document.dispatchEvent(keyEvent);
 
         expect(id).to.be(testId);
+
+      });
+
+      it('should not emit with invalid scope', () => {
+
+        var options = {
+          keycodeSetting: 'mozilla',
+          manager: () => { console.error('Should not be called'); }
+        };
+        var km = new KeymapManager(options);
+
+        var testId = "test:id";
+        var testInput = "Ctrl-Alt-D";
+        var sequence = {
+          input: testInput,
+          id: testId,
+          cssScope: '.testScope'
+        };
+
+        var preRegistration = km.hasShortcut(testInput, '*');
+        expect(preRegistration).to.be(false);
+
+        km.registerSequence(sequence);
+
+        var postRegistrationBad = km.hasShortcut(testInput, '*');
+        expect(postRegistrationBad).to.be(false);
+
+        var postRegistrationGood = km.hasShortcut(testInput, '.testScope');
+        expect(postRegistrationGood).to.be(true);
+
+        var id = '';
+        var handler = (sender: any, value: string) => {
+          id = value;
+        };
+        km.commandRequested.connect(handler, this);
+
+        expect(id).to.be('');
+
+        var keyEvent = genKeyboardEvent({ keyCode: 69, ctrlKey: true, altKey: true });
+        document.dispatchEvent(keyEvent);
+        expect(id).to.be('');
 
       });
 
@@ -95,12 +136,12 @@ describe('phosphor-keymap', () => {
             id: testId
           };
 
-          var preRegistration = km.hasShortcut(testInput);
+          var preRegistration = km.hasShortcut(testInput, '*');
           expect(preRegistration).to.be(false);
 
           km.registerSequence(sequence);
 
-          var postRegistration = km.hasShortcut(testInput);
+          var postRegistration = km.hasShortcut(testInput, '*');
           expect(postRegistration).to.be(true);
 
           var id = '';
@@ -137,16 +178,16 @@ describe('phosphor-keymap', () => {
             id: testId
         };
 
-        var preRegistration = km.hasShortcut(testInput);
+        var preRegistration = km.hasShortcut(testInput, '*');
         expect(preRegistration).to.be(false);
 
         var regSeq = km.registerSequence(sequence);
         expect(regSeq).to.be(true);
 
-        var postRegistration = km.hasShortcut(testInput);
+        var postRegistration = km.hasShortcut(testInput, '*');
         expect(postRegistration).to.be(true);
 
-        var alternate = km.hasShortcut('Shift-Ctrl-X');
+        var alternate = km.hasShortcut('Shift-Ctrl-X', '*');
         expect(alternate).to.be(true);
 
         var cas2 = "Ctrl-Alt-Shift-2";
@@ -155,18 +196,18 @@ describe('phosphor-keymap', () => {
             id: testId
         };
 
-        var preRegistration = km.hasShortcut(cas2);
+        var preRegistration = km.hasShortcut(cas2, '*');
         expect(preRegistration).to.be(false);
 
         km.registerSequence(sequence);
 
-        var postRegistration = km.hasShortcut(testInput);
+        var postRegistration = km.hasShortcut(testInput, '*');
         expect(postRegistration).to.be(true);
 
-        var alternate1 = km.hasShortcut('Alt-ctrl-shift-2');
+        var alternate1 = km.hasShortcut('Alt-ctrl-shift-2', '*');
         expect(alternate1).to.be(true);
 
-        var alternate2 = km.hasShortcut('Ctrl-Alt-Shift-23');
+        var alternate2 = km.hasShortcut('Ctrl-Alt-Shift-23', '*');
         expect(alternate2).to.be(false);
 
       });
@@ -190,13 +231,13 @@ describe('phosphor-keymap', () => {
           id: testId
         };
 
-        var preRegistration = km.hasShortcut(testInput);
+        var preRegistration = km.hasShortcut(testInput, '*');
         expect(preRegistration).to.be(false);
 
         var regSeq = km.registerSequence(sequence);
         expect(regSeq).to.be(true);
 
-        var postRegistration = km.hasShortcut(testInput);
+        var postRegistration = km.hasShortcut(testInput, '*');
         expect(postRegistration).to.be(true);
 
         var falseId = "should:not:be:fired";
@@ -241,7 +282,7 @@ describe('phosphor-keymap', () => {
           id: firstId
         };
 
-        var preRegistration = km.hasShortcut(firstInput);
+        var preRegistration = km.hasShortcut(firstInput, '*');
         expect(preRegistration).to.be(false);
 
         var regFirst = km.registerSequence(firstSeq);
@@ -254,16 +295,16 @@ describe('phosphor-keymap', () => {
           id: secondId
         };
 
-        var preRegistration = km.hasShortcut(secondInput);
+        var preRegistration = km.hasShortcut(secondInput, '*');
         expect(preRegistration).to.be(false);
 
         var regSecond = km.registerSequence(secondSeq);
         expect(regSecond).to.be(true);
 
-        var firstResult = km.shortcutForCommand(firstId);
+        var firstResult = km.shortcutForCommand(firstId, '*');
         expect(firstResult).to.be(firstInput);
 
-        var secondResult = km.shortcutForCommand(secondId);
+        var secondResult = km.shortcutForCommand(secondId, '*');
         expect(secondResult).to.be(secondInput);
 
       });
@@ -280,7 +321,7 @@ describe('phosphor-keymap', () => {
         };
         var km = new KeymapManager(options);
 
-        var dummyReg = km.hasShortcut('Ctrl-X');
+        var dummyReg = km.hasShortcut('Ctrl-X', '*');
         expect(dummyReg).to.be(false);
 
       });
@@ -290,3 +331,8 @@ describe('phosphor-keymap', () => {
   });
 
 });
+
+
+
+
+

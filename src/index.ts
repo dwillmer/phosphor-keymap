@@ -26,6 +26,16 @@ interface IKeySequence {
    * in processing the keyboard shortcut when activated.
    */
   id: string;
+  /**
+   * An optional string of CSS selectors which determine whether the
+   * key sequence should be actioned based on the currently focused
+   * element.
+   * 
+   * Eg., cssScope: '.myStyle .otherStyle'
+   * will cause the shortcut defined here to only be active when 
+   * the active element matches .myStyle OR .otherStyle.
+   */
+  cssScope?: string;
 }
 
 
@@ -49,12 +59,12 @@ interface IKeymapManager {
    * Returns a boolean to show whether a given keyboard shortcut
    * is already in use.
    */
-  hasShortcut(value: string): boolean;
+  hasShortcut(value: string, scope: string): boolean;
 
   /**
    * Returns the keyboard shortcut for a given command id.
    */
-  shortcutForCommand(id: string): string;
+  shortcutForCommand(id: string, scope: string): string;
 }
 
 
@@ -63,14 +73,11 @@ interface IKeymapManager {
  */
 export interface IKeymapManagerOptions {
   /**
-   * The keyboard setting for this machine/user, 'mozilla' or 'ie'
+   * The keyboard setting for this machine/user, 'mozilla' or 'ie'.
+   *
+   * **See also**: http://unixpapa.com/js/key.html
    */
   keycodeSetting: string;
-  /**
-   * The external manager which will execute some code when a correct
-   * key sequence is pressed.
-   */
-  manager: any;
 }
 
 
@@ -78,11 +85,33 @@ var MOZILLA_MODIFIERS: StringMap = { '59': ';', '61': '=', '224': 'meta', '173':
 var IE_MODIFIERS: StringMap = { '186': ';', '187': '=', '189': 'minus' };
 
 /**
- * Convenience interface for string:string mappings
+ * Convenience type definition for string:string mappings
  */ 
 export
-interface StringMap {
-  [s: string]: string;
+type StringMap = { [s: string]: string; };
+type SelectorMap = { [s: string]: StringMap };
+
+
+var protoMatchFunc: Function = (() => {
+  var proto = Element.prototype as any;
+  return (
+    proto.matches ||
+    proto.matchesSelector ||
+    proto.mozMatchesSelector || 
+    proto.msMatchesSelector ||
+    proto.oMatchesSelector || 
+    proto.webkitMatchesSelector || 
+    (function (selector: string) {
+      var elem = this as Element;
+      var matches = elem.ownerDocument.querySelectorAll(selector);
+      return Array.prototype.indexOf.call(matches, elem) !== -1;
+    })
+  );
+})();
+
+
+function matchesSelector(elem: Element, selector: string): boolean {
+  return protoMatchFunc.call(elem, selector);
 }
 
 /**
@@ -145,7 +174,6 @@ class KeymapManager implements IKeymapManager {
       this._keycodeModifications === IE_MODIFIERS;
     }
 
-    this._commandManager = options.manager;
     this._bindEvents();
   }
 
@@ -154,25 +182,35 @@ class KeymapManager implements IKeymapManager {
   }
 
   registerSequence(sequence: IKeySequence): boolean {
+    var scope = sequence.cssScope || '*';
     var input = this._mapKeyFromUserString(sequence.input);
-
-    if (this._keySequenceMap[input] !== undefined) {
-      console.warn("Keyboard shortcut already set: " + sequence.input);
-      return false;
+    
+    if(scope in this._scopeSequenceMap) {
+      if(this._scopeSequenceMap[scope][input] !== undefined) {
+        console.warn("Sequence already set for scope: " + scope + " " + input);
+        return false;
+      }
+    } else {
+      this._scopeSequenceMap[scope] = {};
+      this._scopeCommandMap[scope] = {};
     }
-
-    this._commandToKeySequenceMap[sequence.id] = sequence.input;
-    this._keySequenceMap[input] = sequence.id;
+    this._scopeSequenceMap[scope][input] = sequence.id;
+    this._scopeCommandMap[scope][sequence.id] = sequence.input;
     return true;
   }
 
-  hasShortcut(value: string): boolean {
+  hasShortcut(value: string, scope: string): boolean {
     var input = this._mapKeyFromUserString(value);
-    return input in this._keySequenceMap;
+    return scope in this._scopeSequenceMap && input in this._scopeSequenceMap[scope];
   }
 
-  shortcutForCommand(id: string): string {
-    return this._commandToKeySequenceMap[id];
+  shortcutForCommand(id: string, scope:string): string {
+    var map = this._scopeCommandMap[scope];
+    if(map) {
+      if(map.hasOwnProperty(id)) {
+        return map[id];
+      }
+    }
   }
 
   private _mapKeyFromUserString(input: string): string {
@@ -214,6 +252,29 @@ class KeymapManager implements IKeymapManager {
     return result;
   }
 
+  private _cssMatches(value: string): boolean {
+    var items = value.split(' ');
+    return items.some((x: string) => {
+      return matchesSelector(document.activeElement, x);
+    });
+  }
+
+  private _matchingSelectorMap(value: string): SelectorMap {
+    var result: SelectorMap = {};
+
+    for(var prop in this._scopeSequenceMap) {
+      if(this._scopeSequenceMap.hasOwnProperty(prop)) {
+        if(value in this._scopeSequenceMap[prop]) {
+          if(!(prop in result)) {
+            result[prop] = {};
+          }
+          result[prop][value] = this._scopeSequenceMap[prop][value];
+        }
+      }
+    }
+    return result;
+  }
+
   private _bindEvents(): void {
     var that = this;
     document.addEventListener("keydown", function(event: KeyboardEvent) {
@@ -227,16 +288,17 @@ class KeymapManager implements IKeymapManager {
       }
       var joinedKey = mods + keyStr;
 
-      if(joinedKey in that._keySequenceMap) {
-        var command = that._keySequenceMap[joinedKey];
-        console.log('ID found: ' + command);
-        that.commandRequested.emit(command);
+      var reduced = that._matchingSelectorMap(joinedKey);
+
+      for(var prop in reduced) {
+        if(that._cssMatches(prop)) {
+          that.commandRequested.emit(reduced[prop][joinedKey]);
+        }
       }
     });
   }
 
   private _keycodeModifications: StringMap = {};
-  private _keySequenceMap: StringMap = {};
-  private _commandToKeySequenceMap: StringMap = {};
-  private _commandManager: any;
+  private _scopeSequenceMap: SelectorMap = {};
+  private _scopeCommandMap: SelectorMap = {};
 }
