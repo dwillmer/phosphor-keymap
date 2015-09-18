@@ -307,6 +307,7 @@ class KeymapManager implements IKeymapManager, IDisposable {
    * should not be called directly by user code.
    */
   handleEvent(event: KeyboardEvent) {
+    var stop = false;
     var key = <number>(event.keyCode);
     var mods = this._getModifierStringForEvent(event);
     var keyStr = this._getKeyChars(key);
@@ -322,9 +323,13 @@ class KeymapManager implements IKeymapManager, IDisposable {
       while (currNode !== null && !matchesSelector(currNode, prop)) {
         currNode = currNode.parentElement; // TODO
       }
-      if(currNode) {
+      if (currNode) {
         this.commandRequested.emit(reduced[prop][joinedKey]);
+        stop = true;
       }
+    }
+    if (stop) {
+      event.stopPropagation();
     }
   }
 
