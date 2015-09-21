@@ -211,7 +211,7 @@ describe('phosphor-keymap', () => {
 
     describe('#registerBindings mozilla', () => {
 
-      it('should not overwrite a key binding', () => {
+      it('should allow multiple commands per key binding', () => {
 
         var km = new KeymapManager();
         var testId = "test:id";
@@ -230,13 +230,13 @@ describe('phosphor-keymap', () => {
         var postRegistration = km.hasShortcut(testInput, '*');
         expect(postRegistration).to.be(true);
 
-        var falseId = "should:not:be:fired";
+        var secondId = "second:id";
         var bindingRepeat = {
           keys: testInput,
-          command: falseId
+          command: secondId
         }
         var regBindingRepeat = km.registerBindings([bindingRepeat]);
-        expect((<BindingDisposable>regBindingRepeat).count).to.be(0);
+        expect((<BindingDisposable>regBindingRepeat).count).to.be(1);
 
         var id = '';
         var handler = (sender: any, value: string) => {
@@ -249,7 +249,7 @@ describe('phosphor-keymap', () => {
         var keyEvent = genKeyboardEvent({ keyCode: 76, ctrlKey: true, altKey: true});
         document.body.dispatchEvent(keyEvent);
 
-        expect(id).to.be(testId);
+        expect(id).to.be(secondId);
 
         regSeq.dispose();
         regBindingRepeat.dispose();
@@ -321,9 +321,9 @@ describe('phosphor-keymap', () => {
 
     });
 
-    describe('#shortcutForCommand', () => {
+    describe('#shortcutsForCommand', () => {
 
-      it('should return the shortcut for a given command', () => {
+      it('should return the shortcuts for a given command', () => {
 
         var km = new KeymapManager();
         var firstId = "id:first";
@@ -352,11 +352,13 @@ describe('phosphor-keymap', () => {
         var regSecond = km.registerBindings([secondSeq]);
         expect((<BindingDisposable>regSecond).count).to.be(1);
 
-        var firstResult = km.shortcutForCommand(firstId, '*');
-        expect(firstResult).to.be(firstInput);
+        var firstResult = km.shortcutsForCommand(firstId, '*');
+        expect(firstResult.length).to.be(1);
+        expect(firstResult[0]).to.be(firstInput);
 
-        var secondResult = km.shortcutForCommand(secondId, '*');
-        expect(secondResult).to.be(secondInput);
+        var secondResult = km.shortcutsForCommand(secondId, '*');
+        expect(secondResult.length).to.be(1);
+        expect(secondResult[0]).to.be(secondInput);
 
         expect(regFirst.isDisposed).to.be(false);
         regFirst.dispose();

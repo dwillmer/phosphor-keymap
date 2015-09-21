@@ -79,7 +79,7 @@ interface IKeymapManager {
   /**
    * Returns the keyboard shortcut for a given command id.
    */
-  shortcutForCommand(id: string, scope: string): string;
+  shortcutsForCommand(id: string, scope: string): string[];
 }
 
 /**
@@ -118,7 +118,6 @@ class BindingDisposable implements IDisposable {
    */
   dispose(): void {
     if (this._bindings !== null) {
-      console.log('Disposing of : ' + this._bindings);
       this._manager.removeBindings(this._bindings);
       this._bindings = null;
     }
@@ -244,17 +243,20 @@ class KeymapManager implements IKeymapManager, IDisposable {
       var scope = bin.selector || '*';
       var input = this._mapKeyFromUserString(bin.keys);
 
-      if (scope in this._scopeSequenceMap) {
-        if (this._scopeSequenceMap[scope][input] !== undefined) {
-          console.warn("Sequence already set for scope: " + scope + " " + input);
-          continue;
-        }
-      } else {
+      if (!(scope in this._scopeSequenceMap)) {
         this._scopeSequenceMap[scope] = {};
         this._scopeCommandMap[scope] = {};
       }
-      this._scopeSequenceMap[scope][input] = bin.command;
-      this._scopeCommandMap[scope][bin.command] = bin.keys;
+
+      if (!(input in this._scopeSequenceMap[scope])) {
+        this._scopeSequenceMap[scope][input] = [];
+      }
+      if (!(bin.command in this._scopeCommandMap[scope])) {
+        this._scopeCommandMap[scope][bin.command] = [];
+      }
+
+      this._scopeSequenceMap[scope][input].push(bin.command);
+      this._scopeCommandMap[scope][bin.command].push(bin.keys);
       disposable.addBinding(bindings[i]);
     }
 
@@ -270,8 +272,22 @@ class KeymapManager implements IKeymapManager, IDisposable {
       var bin = bindings[i];
       var scope = bin.selector || '*';
       var input = this._mapKeyFromUserString(bin.keys);
-      delete this._scopeSequenceMap[scope][input];
-      delete this._scopeCommandMap[scope][bin.command];
+
+      var seqIndex = this._scopeSequenceMap[scope][input].indexOf(bin.command);
+      if (seqIndex > -1) {
+        this._scopeSequenceMap[scope][input].splice(seqIndex,1);
+        if (this._scopeSequenceMap[scope][input].length === 0) {
+          delete this._scopeSequenceMap[scope][input];
+        }
+      }
+
+      var comIndex = this._scopeCommandMap[scope][bin.command].indexOf(bin.keys);
+      if (comIndex > -1) {
+        this._scopeCommandMap[scope][bin.command].splice(comIndex, 1);
+        if (this._scopeCommandMap[scope][bin.command].length === 0) {
+          delete this._scopeCommandMap[scope][bin.command];
+        }
+      }
     }
   }
 
@@ -284,10 +300,10 @@ class KeymapManager implements IKeymapManager, IDisposable {
   }
 
   /**
-   * Given a command id and a scope, returns the registered key sequence
-   * to trigger the command.
+   * Given a command id and a scope, returns the registered key sequences which 
+   * will trigger the command.
    */
-  shortcutForCommand(id: string, scope:string): string {
+  shortcutsForCommand(id: string, scope:string): string[] {
     var map = this._scopeCommandMap[scope];
     if (map) {
       if (map.hasOwnProperty(id)) {
@@ -334,7 +350,9 @@ class KeymapManager implements IKeymapManager, IDisposable {
         currElem = currElem.parentElement;
       }
       if (currElem) {
-        this.commandRequested.emit(reduced[prop][joinedKey]);
+        for (var i = 0; i<reduced[prop][joinedKey].length; i++) {
+          this.commandRequested.emit(reduced[prop][joinedKey][i]);
+        }
         preventDefault = true;
       }
     }
@@ -350,7 +368,6 @@ class KeymapManager implements IKeymapManager, IDisposable {
   }
 
   private _handleTimeout(): void {
-    console.log('Handling timeout');
     this._timeoutObj = 0;
     this._timeoutState = '';
   }
@@ -373,7 +390,6 @@ class KeymapManager implements IKeymapManager, IDisposable {
       previousMod = modString;
       result += modString + keyString;
     }
-    console.log('MAP KEY: ' + result);
     return result;
   }
 
@@ -444,7 +460,8 @@ class KeymapManager implements IKeymapManager, IDisposable {
  * Convenience type definition for string:string mappings
  */
 type StringMap = { [s: string]: string; };
-type SelectorMap = { [s: string]: StringMap };
+type StringArrayMap = { [s: string]: string[]; };
+type SelectorMap = { [s: string]: StringArrayMap };
 
 /**
  * Cross-browser implementation of matches / matchesSelector.
