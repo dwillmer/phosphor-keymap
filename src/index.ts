@@ -315,7 +315,7 @@ class KeymapManager implements IKeymapManager, IDisposable {
   }
 
   private _evtKeyDown(event: KeyboardEvent): void {
-    var stop = false;
+    var preventDefault = false;
     var key = <number>(event.keyCode);
     var mods = this._getModifierStringForEvent(event);
     var keyStr = this._getKeyChars(key);
@@ -323,7 +323,9 @@ class KeymapManager implements IKeymapManager, IDisposable {
       console.error('Keycode not found: ' + key.toString());
       return;
     }
-    var joinedKey = mods + keyStr;
+    var prefix = (this._timeoutState ? this._timeoutState + ' ' : '');
+    var joinedKey = prefix + mods + keyStr;
+
     var reduced = this._matchingSelectorMap(joinedKey);
 
     for (var prop in reduced) {
@@ -333,20 +335,46 @@ class KeymapManager implements IKeymapManager, IDisposable {
       }
       if (currElem) {
         this.commandRequested.emit(reduced[prop][joinedKey]);
-        stop = true;
+        preventDefault = true;
       }
     }
-    if (stop) {
-      event.stopPropagation();
+    if (preventDefault) {
+      event.preventDefault();
     }
+
+    if (this._timeoutObj) {
+      clearTimeout(this._timeoutObj);
+    }
+    this._timeoutState = joinedKey;
+    this._timeoutObj = setTimeout(this._handleTimeout.bind(this), this._timeoutInMillis);
+  }
+
+  private _handleTimeout(): void {
+    console.log('Handling timeout');
+    this._timeoutObj = 0;
+    this._timeoutState = '';
   }
 
   private _mapKeyFromUserString(input: string): string {
-    var lowerInput = input.toLowerCase();
-    var seqItems = lowerInput.split('-');
-    var keyString = seqItems[seqItems.length - 1];
-    var modString = this._getModifierStringForSequence(lowerInput);
-    return modString + keyString;
+    var tokens = input.split(' ');
+    var result = '';
+    var previousMod = '';
+    for (var i = 0; i < tokens.length; i++) {
+      var lowerInput = tokens[i].toLowerCase();
+      var seqItems = lowerInput.split('-');
+      var keyString = seqItems[seqItems.length - 1];
+      var modString = this._getModifierStringForSequence(lowerInput);
+      if (result !== '') {
+        result += ' ';
+        if (modString === '000') {
+          modString = previousMod;
+        }
+      }
+      previousMod = modString;
+      result += modString + keyString;
+    }
+    console.log('MAP KEY: ' + result);
+    return result;
   }
 
   private _getKeyChars(code: number): string {
@@ -405,8 +433,11 @@ class KeymapManager implements IKeymapManager, IDisposable {
   }
 
   private _keycodeModifications: StringMap = {};
-  private _scopeSequenceMap: SelectorMap = {};
   private _scopeCommandMap: SelectorMap = {};
+  private _scopeSequenceMap: SelectorMap = {};
+  private _timeoutInMillis: number = 750;
+  private _timeoutObj: number = 0;
+  private _timeoutState: string = '';
 }
 
 /**

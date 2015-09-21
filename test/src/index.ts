@@ -257,6 +257,68 @@ describe('phosphor-keymap', () => {
 
       });
 
+      it('should accept multiple keys in a single binding', () => {
+
+        var km = new KeymapManager();
+        var testId = "test:id";
+        var testInput = "Ctrl-X Y";
+        var binding = {
+          keys: testInput,
+          command: testId
+        };
+
+        var preRegistration = km.hasShortcut(testInput, '*');
+        expect(preRegistration).to.be(false);
+
+        var multiKeyBind = km.registerBindings([binding]);
+        expect((<BindingDisposable>multiKeyBind).count).to.be(1);
+
+        var postRegistration = km.hasShortcut(testInput, '*');
+        expect(postRegistration).to.be(true);
+
+        var exists = km.hasShortcut('Ctrl-X Y', '*');
+        expect(exists).to.be(true);
+
+        var exists2 = km.hasShortcut('Ctrl-x Ctrl-y', '*');
+        expect(exists).to.be(true);
+
+        multiKeyBind.dispose();
+        km.dispose();
+        
+      });
+
+      it('should fire on multiple keydown events', () => {
+
+        var km = new KeymapManager();
+        var testId = "test:id";
+        var testInput = "Ctrl-f g";
+        var binding = {
+          keys: testInput,
+          command: testId
+        };
+
+        var multiKeyBind = km.registerBindings([binding]);
+        expect((<BindingDisposable>multiKeyBind).count).to.be(1);
+
+        var id = '';
+        var handler = (sender: any, value: string) => {
+            id = value;
+        };
+        km.commandRequested.connect(handler, this);
+
+        expect(id).to.be('');
+
+        var keyEvent = genKeyboardEvent({ keyCode: 70, ctrlKey: true });
+        var keyEventTwo = genKeyboardEvent({ keyCode: 71, ctrlKey: true });
+        document.body.dispatchEvent(keyEvent);
+        document.body.dispatchEvent(keyEventTwo);
+
+        expect(id).to.be(testId);
+        multiKeyBind.dispose();
+        km.dispose();
+
+      });
+
     });
 
     describe('#shortcutForCommand', () => {
