@@ -82,6 +82,7 @@ interface IKeymapManager {
   shortcutsForCommand(id: string, scope: string): string[];
 }
 
+
 /**
  * Disposes of keyboard shortcut bindings.
  */
@@ -169,7 +170,7 @@ var KEYCODES: StringMap = {
 /**
  * Modifier keys for sequences.
  */
-var MODIFIER_KEYS: string[] = ['ctrl', 'alt', 'shift'];
+var MODIFIER_KEYS: string[] = ['ctrl', 'alt', 'shift', 'meta'];
 
 /**
  * A convenience implementation of IKeymapManager
@@ -216,7 +217,10 @@ class KeymapManager implements IKeymapManager, IDisposable {
    * Unbind the event handler and clean out the state.
    */
   dispose(): void {
+    console.log('DISPOSE');
     this._unbindEvents();
+    clearTimeout(this._timeoutObj);
+    this._handleTimeout();
     this._scopeSequenceMap === undefined;
     this._scopeCommandMap === undefined;
   }
@@ -241,7 +245,7 @@ class KeymapManager implements IKeymapManager, IDisposable {
     for (var i = 0; i < bindings.length; i++) {
       var bin = bindings[i];
       var scope = bin.selector || '*';
-      var input = this._mapKeyFromUserString(bin.keys);
+      var input = normaliseModifiers(bin.keys);
 
       if (!(scope in this._scopeSequenceMap)) {
         this._scopeSequenceMap[scope] = {};
@@ -271,7 +275,7 @@ class KeymapManager implements IKeymapManager, IDisposable {
     for (var i = 0; i < bindings.length; i++) {
       var bin = bindings[i];
       var scope = bin.selector || '*';
-      var input = this._mapKeyFromUserString(bin.keys);
+      var input = normaliseModifiers(bin.keys);
 
       var seqIndex = this._scopeSequenceMap[scope][input].indexOf(bin.command);
       if (seqIndex > -1) {
@@ -295,7 +299,7 @@ class KeymapManager implements IKeymapManager, IDisposable {
    * Checks whether a given shortcut has been registered in a given scope.
    */
   hasShortcut(value: string, scope: string): boolean {
-    var input = this._mapKeyFromUserString(value);
+    var input = normaliseModifiers(value);
     return scope in this._scopeSequenceMap && input in this._scopeSequenceMap[scope];
   }
 
@@ -330,67 +334,99 @@ class KeymapManager implements IKeymapManager, IDisposable {
     }
   }
 
+  private _printSelMap( value: any ) {
+    console.log('\nSEL:\n');
+    for (var prop in value) {
+      if (value.hasOwnProperty(prop)) {
+        for (var second in value[prop]) {
+          if (value[prop].hasOwnProperty(second)) {
+            console.log(prop + '\t' + second + '\t' + value[prop][second]);
+          }
+        }
+      }
+    }
+  }
+
   private _evtKeyDown(event: KeyboardEvent): void {
-    var preventDefault = false;
+    console.log('EVT KEYDOWN RECEIVED');
+    var modString = this._getModifierStringForEvent(event);
+    if(!modString) {
+      return;
+    }
     var key = <number>(event.keyCode);
-    var mods = this._getModifierStringForEvent(event);
     var keyStr = this._getKeyChars(key);
+    var modsKey = normaliseModifiers(modString + '-' + keyStr);
+    var preventDefault = false;
+    //console.log('MODS: ' + mods);
     if (keyStr === undefined) {
       console.error('Keycode not found: ' + key.toString());
       return;
     }
-    var prefix = (this._timeoutState ? this._timeoutState + ' ' : '');
-    var joinedKey = prefix + mods + keyStr;
-
+    var prefix = ((this._timeoutState && this._timeoutObj !== 0) ? this._timeoutState + ' ' : '');
+    //console.log('TIMEOUT STATE: ' + this._timeoutState);
+    var joinedKey = prefix + modsKey; // prefix +
+    console.log('JOINED KEY: ' + joinedKey + joinedKey.length);
     var reduced = this._matchingSelectorMap(joinedKey);
 
+    //this._printSelMap(reduced);
+
     for (var prop in reduced) {
+      if (!(reduced.hasOwnProperty(prop))) {
+        continue;
+      }
+      console.log('PROP: ' + prop);
       var currElem = event.target as Element;
       while (currElem !== null && !matchesSelector(currElem, prop)) {
+        console.log('MATCHES : ' + matchesSelector(currElem, prop).toString());
         currElem = currElem.parentElement;
       }
-      if (currElem) {
-        for (var i = 0; i<reduced[prop][joinedKey].length; i++) {
-          this.commandRequested.emit(reduced[prop][joinedKey][i]);
+
+      //console.log('CURR: ' + currElem);
+      if (currElem !== null) {
+
+        // DEBUG
+        for (var dbg in reduced[prop]) {
+          if (reduced[prop].hasOwnProperty(dbg)) {
+            console.log("EXISTS: " + dbg + dbg.length);
+          }
+        }
+
+        if (reduced[prop][joinedKey] === undefined) {
+          continue;
+        }
+
+        //console.log('RPJ LEN: ' + reduced[prop][joinedKey].length);
+        for (var i = 0; i < reduced[prop][joinedKey].length; i++) {
+          var cmd = reduced[prop][joinedKey][i];
+          console.log("Emitting command requested: " + prop + " " + joinedKey + " " + cmd);
+          this.commandRequested.emit(cmd);
         }
         preventDefault = true;
       }
     }
     if (preventDefault) {
       event.preventDefault();
-    }
-
-    if (this._timeoutObj) {
+      event.cancelBubble = true;
       clearTimeout(this._timeoutObj);
+      this._handleTimeout();
+      return;
+    } else {
+      if (this._timeoutObj) {
+        clearTimeout(this._timeoutObj);
+      }
+      this._timeoutState = joinedKey;
+      var self = this;
+      // this._timeoutObj = setTimeout(() => {
+      //   self._timeoutObj = 0;
+      //   self._timeoutState = '';
+      // }, this._timeoutInMillis);
+      //console.log('TIMEOUT SET: ' + this._timeoutObj);
     }
-    this._timeoutState = joinedKey;
-    this._timeoutObj = setTimeout(this._handleTimeout.bind(this), this._timeoutInMillis);
   }
 
   private _handleTimeout(): void {
     this._timeoutObj = 0;
     this._timeoutState = '';
-  }
-
-  private _mapKeyFromUserString(input: string): string {
-    var tokens = input.split(' ');
-    var result = '';
-    var previousMod = '';
-    for (var i = 0; i < tokens.length; i++) {
-      var lowerInput = tokens[i].toLowerCase();
-      var seqItems = lowerInput.split('-');
-      var keyString = seqItems[seqItems.length - 1];
-      var modString = this._getModifierStringForSequence(lowerInput);
-      if (result !== '') {
-        result += ' ';
-        if (modString === '000') {
-          modString = previousMod;
-        }
-      }
-      previousMod = modString;
-      result += modString + keyString;
-    }
-    return result;
   }
 
   private _getKeyChars(code: number): string {
@@ -403,37 +439,36 @@ class KeymapManager implements IKeymapManager, IDisposable {
     console.error('Unrecognised keycode: ' + code.toString());
   }
 
-  private _getModifierStringForSequence(value: string): string {
-    var lowerValue = value.toLowerCase();
-    var result = '';
-    for (var i = 0; i < MODIFIER_KEYS.length; i++) {
-      result += lowerValue.indexOf(MODIFIER_KEYS[i]) > -1 ? '1' : '0';
-    }
-    return result; 
-  }
-
   private _getModifierStringForEvent(event: KeyboardEvent): string {
     var isCtrl = <boolean>(event.ctrlKey);
     var isAlt = <boolean>(event.altKey);
     var isShift = <boolean>(event.shiftKey);
 
-    var result = '';
-    result += isCtrl ? '1' : '0';
-    result += isAlt ? '1' : '0';
-    result += isShift ? '1' : '0';
-    return result;
+    var mods: string[] = [];
+    if (isCtrl) {
+      mods.push('ctrl');
+    }
+    if (isAlt) {
+      mods.push('alt');
+    }
+    if (isShift) {
+      mods.push('shift');
+    }
+
+    return mods.join('-');
   }
 
   private _matchingSelectorMap(value: string): SelectorMap {
     var result: SelectorMap = {};
-
     for (var prop in this._scopeSequenceMap) {
       if (this._scopeSequenceMap.hasOwnProperty(prop)) {
-        if (value in this._scopeSequenceMap[prop]) {
-          if (!(prop in result)) {
-            result[prop] = {};
+        for (value in this._scopeSequenceMap[prop]) {
+          if (this._scopeSequenceMap[prop].hasOwnProperty(value)) {
+            if (!(prop in result)) {
+              result[prop] = {};
+            }
+            result[prop][value] = this._scopeSequenceMap[prop][value];
           }
-          result[prop][value] = this._scopeSequenceMap[prop][value];
         }
       }
     }
@@ -464,6 +499,37 @@ type StringArrayMap = { [s: string]: string[]; };
 type SelectorMap = { [s: string]: StringArrayMap };
 
 /**
+ * Normalises the input string with respect to the modifier keys.
+ *
+ * We don't want to impose a key order on users, so we want to match
+ * 'Ctrl-Shift-X' with 'Shift-Ctrl-X'.
+ */        
+export       
+var normaliseModifiers = function(input: string) {
+  var lower = input.toLowerCase();
+  var sequences = lower.split(' ');
+ 
+  var result = '';
+  for (var i=0; i<sequences.length; i++) {
+    var tokens = sequences[i].split('-');
+    if (tokens.length > 1) {
+      var key = tokens.splice(tokens.length-1, tokens.length-1);
+      tokens.sort(normOrder);
+      tokens.push(key[0]);
+      if (i > 0) { result += ' '; }
+      result += tokens.join('-');
+    } else {
+      result += ' '+tokens[0];
+    }
+  }
+  return result;
+}
+
+var normOrder = function(a: string, b: string) {
+  return MODIFIER_KEYS.indexOf(a) - MODIFIER_KEYS.indexOf(b);
+}
+
+/**
  * Cross-browser implementation of matches / matchesSelector.
  */
 var protoMatchFunc: Function = (() => {
@@ -482,6 +548,7 @@ var protoMatchFunc: Function = (() => {
     })
     );
 })();
+
 
 /**
  * Determines whether the element matches the css selector string.

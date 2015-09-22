@@ -10,7 +10,7 @@
 import expect = require('expect.js');
 
 import {
-  KeymapManager, IKeyBinding, BindingDisposable
+  KeymapManager, IKeyBinding, BindingDisposable, normaliseModifiers
 } from '../../lib/index';
 
 
@@ -42,7 +42,7 @@ describe('phosphor-keymap', () => {
 
     describe('#keycodes mozilla', () => {
 
-      it('should register 59 for semi-colon', () => {
+      it('should register and fire on keyboard event', () => {
 
         var km = new KeymapManager();
         var testId = 'test:id';
@@ -63,7 +63,8 @@ describe('phosphor-keymap', () => {
 
         var id = '';
         var handler = (sender: any, value: string) => {
-            id = value;
+          console.log('CMD TEST HANDLER CALLED');
+          id = value;
         };
         km.commandRequested.connect(handler, this);
 
@@ -109,7 +110,7 @@ describe('phosphor-keymap', () => {
 
         expect(id).to.be('');
 
-        var keyEvent = genKeyboardEvent({ keyCode: 69, ctrlKey: true, altKey: true });
+        var keyEvent = genKeyboardEvent({ keyCode: 68, ctrlKey: true, altKey: true });
         document.body.dispatchEvent(keyEvent);
         expect(id).to.be('');
 
@@ -234,7 +235,7 @@ describe('phosphor-keymap', () => {
         var bindingRepeat = {
           keys: testInput,
           command: secondId
-        }
+        };
         var regBindingRepeat = km.registerBindings([bindingRepeat]);
         expect((<BindingDisposable>regBindingRepeat).count).to.be(1);
 
@@ -246,7 +247,7 @@ describe('phosphor-keymap', () => {
 
         expect(id).to.be('');
 
-        var keyEvent = genKeyboardEvent({ keyCode: 76, ctrlKey: true, altKey: true});
+        var keyEvent = genKeyboardEvent({keyCode: 76, ctrlKey: true, altKey: true});
         document.body.dispatchEvent(keyEvent);
 
         expect(id).to.be(secondId);
