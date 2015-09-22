@@ -357,14 +357,13 @@ class KeymapManager implements IKeymapManager, IDisposable {
     var keyStr = this._getKeyChars(key);
     var modsKey = normaliseModifiers(modString + '-' + keyStr);
     var preventDefault = false;
-    //console.log('MODS: ' + mods);
     if (keyStr === undefined) {
       console.error('Keycode not found: ' + key.toString());
       return;
     }
-    var prefix = ((this._timeoutState && this._timeoutObj !== 0) ? this._timeoutState + ' ' : '');
+    var prefix = ((this._timeoutState) ? this._timeoutState + ' ' : '');
     //console.log('TIMEOUT STATE: ' + this._timeoutState);
-    var joinedKey = prefix + modsKey; // prefix +
+    var joinedKey = prefix + modsKey;
     console.log('JOINED KEY: ' + joinedKey + joinedKey.length);
     var reduced = this._matchingSelectorMap(joinedKey);
 
@@ -395,7 +394,6 @@ class KeymapManager implements IKeymapManager, IDisposable {
           continue;
         }
 
-        //console.log('RPJ LEN: ' + reduced[prop][joinedKey].length);
         for (var i = 0; i < reduced[prop][joinedKey].length; i++) {
           var cmd = reduced[prop][joinedKey][i];
           console.log("Emitting command requested: " + prop + " " + joinedKey + " " + cmd);
