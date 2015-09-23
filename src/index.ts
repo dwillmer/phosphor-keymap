@@ -467,8 +467,7 @@ type SelectorMap = { [s: string]: StringArrayMap };
  *
  * We don't want to impose a key order on users, so we want to match
  * 'Ctrl-Shift-X' with 'Shift-Ctrl-X'.
- */        
-export       
+ */               
 var normaliseModifiers = function(input: string) {
   var lower = input.toLowerCase();
   var sequences = lower.split(' ');
@@ -495,6 +494,10 @@ var normaliseModifiers = function(input: string) {
   return result;
 }
 
+/**
+ * Normalises the order of shortcut tokens with respect
+ * to the modifier keys order.
+ */
 var normOrder = function(a: string, b: string) {
   return MODIFIER_KEYS.indexOf(a) - MODIFIER_KEYS.indexOf(b);
 }
@@ -528,7 +531,10 @@ function matchesSelector(elem: Element, selector: string): boolean {
 }
 
 
-// http://stackoverflow.com/questions/2400935/browser-detection-in-javascript
+/**
+ * Browser detection regex, taken from:
+ * http://stackoverflow.com/questions/2400935/browser-detection-in-javascript
+ */
 var browser: any = (function(): any {
   if (typeof navigator === 'undefined') {
     // navigator undefined in node

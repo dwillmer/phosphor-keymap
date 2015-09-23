@@ -10,7 +10,7 @@
 import expect = require('expect.js');
 
 import {
-  KeymapManager, IKeyBinding, BindingDisposable, normaliseModifiers
+  KeymapManager, IKeyBinding, BindingDisposable
 } from '../../lib/index';
 
 
@@ -63,7 +63,6 @@ describe('phosphor-keymap', () => {
 
         var id = '';
         var handler = (sender: any, value: string) => {
-          console.log('CMD TEST HANDLER CALLED');
           id = value;
         };
         km.commandRequested.connect(handler, this);
