@@ -35,7 +35,7 @@ interface IKeyBinding {
    * key sequence should be actioned based on the currently focused
    * element.
    * 
-   * Eg., cssScope: '.myStyle .otherStyle'
+   * Eg., selector: '.myStyle .otherStyle'
    * will cause the shortcut defined here to only be active when 
    * the active element matches .myStyle OR .otherStyle.
    */
@@ -77,14 +77,14 @@ interface IKeymapManager {
   hasShortcut(value: string, scope: string): boolean;
 
   /**
-   * Returns the keyboard shortcut for a given command id.
+   * Returns the keyboard shortcuts for a given command id.
    */
   shortcutsForCommand(id: string, scope: string): string[];
 }
 
 
 /**
- * Disposes of keyboard shortcut bindings.
+ * Manages lifecycle of keyboard shortcut bindings.
  */
 export
 class BindingDisposable implements IDisposable {
@@ -131,6 +131,10 @@ class BindingDisposable implements IDisposable {
 }
 
 
+/**
+ * Keyboard modifiers which modify the view into the main
+ * keycodes map below for cross-browser compatibility.
+ */
 var MOZILLA_MODIFIERS: StringMap = { '59': ';', '61': '=', '224': 'meta', '173': 'minus' };
 var IE_MODIFIERS: StringMap = { '186': ';', '187': '=', '189': 'minus' };
 
@@ -138,7 +142,7 @@ var IE_MODIFIERS: StringMap = { '186': ';', '187': '=', '189': 'minus' };
  * Map of keycode to key character.
  *
  * **See also**
- * https://github.com/jupyter/notebook/blob/master/notebook/static/base/js/keyboard.js#L30
+ * https://github.com/jupyter/notebook/blob/9b514b14064f86e9f5a5a1b94545f81aa3eb57e1/notebook/static/base/js/keyboard.js#L30
  *
  * We potentially have more than one Keyboard Manager in the app, so we 
  * don't want to store a copy of the keycodes list for each instance.
@@ -178,7 +182,7 @@ var MODIFIER_KEYS: string[] = ['ctrl', 'alt', 'shift', 'meta'];
 export 
 class KeymapManager implements IKeymapManager, IDisposable {
   /**
-   * A signal emitted when the [[commandRequested]]
+   * A signal that is emitted through [[commandRequested]].
    */
   static commandRequestedSignal = new Signal<KeymapManager, string>();
 
@@ -210,7 +214,7 @@ class KeymapManager implements IKeymapManager, IDisposable {
    * Returns whether this manager has already been disposed.
    */
   get isDisposed(): boolean {
-    return this._scopeSequenceMap === undefined;
+    return this._scopeSequenceMap === null;
   }
 
   /**
@@ -220,8 +224,8 @@ class KeymapManager implements IKeymapManager, IDisposable {
     this._unbindEvents();
     clearTimeout(this._timeoutObj);
     this._handleTimeout();
-    this._scopeSequenceMap === undefined;
-    this._scopeCommandMap === undefined;
+    this._scopeSequenceMap === null;
+    this._scopeCommandMap === null;
   }
 
   /**
@@ -306,7 +310,7 @@ class KeymapManager implements IKeymapManager, IDisposable {
    * Given a command id and a scope, returns the registered key sequences which 
    * will trigger the command.
    */
-  shortcutsForCommand(id: string, scope:string): string[] {
+  shortcutsForCommand(id: string, scope: string): string[] {
     var map = this._scopeCommandMap[scope];
     if (map) {
       if (map.hasOwnProperty(id)) {
@@ -327,9 +331,9 @@ class KeymapManager implements IKeymapManager, IDisposable {
    */
   handleEvent(event: Event) {
     switch (event.type) {
-      case 'keydown':
-        this._evtKeyDown(event as KeyboardEvent);
-        break;
+    case 'keydown':
+      this._evtKeyDown(event as KeyboardEvent);
+      break;
     }
   }
 
@@ -338,7 +342,7 @@ class KeymapManager implements IKeymapManager, IDisposable {
     if(!modString) {
       return;
     }
-    var key = <number>(event.keyCode);
+    var key = event.keyCode as number;
     var keyStr = this._getKeyChars(key);
     var modsKey = normaliseModifiers(modString + '-' + keyStr);
     var preventDefault = false;
@@ -351,7 +355,7 @@ class KeymapManager implements IKeymapManager, IDisposable {
     var reduced = this._matchingSelectorMap(joinedKey);
 
     for (var prop in reduced) {
-      if (!(reduced.hasOwnProperty(prop))) {
+      if (!reduced.hasOwnProperty(prop)) {
         continue;
       }
       var currElem = event.target as Element;
@@ -380,10 +384,9 @@ class KeymapManager implements IKeymapManager, IDisposable {
         clearTimeout(this._timeoutObj);
       }
       this._timeoutState = joinedKey;
-      var self = this;
       this._timeoutObj = setTimeout(() => {
-        self._timeoutObj = 0;
-        self._timeoutState = '';
+        this._timeoutObj = 0;
+        this._timeoutState = '';
       }, this._timeoutInMillis);
     }
   }
@@ -404,21 +407,14 @@ class KeymapManager implements IKeymapManager, IDisposable {
   }
 
   private _getModifierStringForEvent(event: KeyboardEvent): string {
-    var isCtrl = <boolean>(event.ctrlKey);
-    var isAlt = <boolean>(event.altKey);
-    var isShift = <boolean>(event.shiftKey);
+    var isCtrl = event.ctrlKey as boolean;
+    var isAlt = event.altKey as boolean;
+    var isShift = event.shiftKey as boolean;
 
     var mods: string[] = [];
-    if (isCtrl) {
-      mods.push('ctrl');
-    }
-    if (isAlt) {
-      mods.push('alt');
-    }
-    if (isShift) {
-      mods.push('shift');
-    }
-
+    if (isCtrl) mods.push('ctrl');
+    if (isAlt) mods.push('alt');
+    if (isShift) mods.push('shift');
     return mods.join('-');
   }
 
@@ -450,9 +446,9 @@ class KeymapManager implements IKeymapManager, IDisposable {
   private _keycodeModifications: StringMap = {};
   private _scopeCommandMap: SelectorMap = {};
   private _scopeSequenceMap: SelectorMap = {};
-  private _timeoutInMillis: number = 750;
-  private _timeoutObj: number = 0;
-  private _timeoutState: string = '';
+  private _timeoutInMillis = 750;
+  private _timeoutObj = 0;
+  private _timeoutState = '';
 }
 
 /**
@@ -468,13 +464,13 @@ type SelectorMap = { [s: string]: StringArrayMap };
  * We don't want to impose a key order on users, so we want to match
  * 'Ctrl-Shift-X' with 'Shift-Ctrl-X'.
  */               
-var normaliseModifiers = function(input: string) {
+var normaliseModifiers = function(input: string): string {
   var lower = input.toLowerCase();
   var sequences = lower.split(' ');
  
   var result = '';
   var previousMod = '';
-  for (var i=0; i<sequences.length; i++) {
+  for (var i = 0; i < sequences.length; i++) {
     var tokens = sequences[i].split('-');
     if (tokens.length > 1) {
       var key = tokens.splice(tokens.length-1, tokens.length-1);
@@ -498,7 +494,7 @@ var normaliseModifiers = function(input: string) {
  * Normalises the order of shortcut tokens with respect
  * to the modifier keys order.
  */
-var normOrder = function(a: string, b: string) {
+var normOrder = function(a: string, b: string): number {
   return MODIFIER_KEYS.indexOf(a) - MODIFIER_KEYS.indexOf(b);
 }
 

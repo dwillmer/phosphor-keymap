@@ -43,7 +43,6 @@ describe('phosphor-keymap', () => {
     describe('#keycodes mozilla', () => {
 
       it('should register and fire on keyboard event', () => {
-
         var km = new KeymapManager();
         var testId = 'test:id';
         var testInput = "Ctrl-;";
@@ -79,7 +78,6 @@ describe('phosphor-keymap', () => {
       });
 
       it('should not emit with invalid scope', () => {
-
         var km = new KeymapManager();
         var testId = "test:id";
         var testInput = "Ctrl-Alt-D";
@@ -119,7 +117,6 @@ describe('phosphor-keymap', () => {
       });
 
       it('should not emit with invalid keycode', () => {
-
           var km = new KeymapManager();
           var testId = 'test:id';
           var testInput = 'Ctrl-L';
@@ -159,7 +156,6 @@ describe('phosphor-keymap', () => {
     describe('#modifiers mozilla', () => {
 
       it('should recognise permutations of modifiers', () => {
-
         var km = new KeymapManager();
         var testId = "test:id";
         var testInput = "Ctrl-Shift-x";
@@ -212,7 +208,6 @@ describe('phosphor-keymap', () => {
     describe('#registerBindings mozilla', () => {
 
       it('should allow multiple commands per key binding', () => {
-
         var km = new KeymapManager();
         var testId = "test:id";
         var testInput = "Ctrl-Alt-L";
@@ -258,7 +253,6 @@ describe('phosphor-keymap', () => {
       });
 
       it('should accept multiple keys in a single binding', () => {
-
         var km = new KeymapManager();
         var testId = "test:id";
         var testInput = "Ctrl-X Y";
@@ -288,7 +282,6 @@ describe('phosphor-keymap', () => {
       });
 
       it('should fire on multiple keydown events', () => {
-
         var km = new KeymapManager();
         var testId = "test:id";
         var testInput = "Ctrl-f g";
@@ -324,7 +317,6 @@ describe('phosphor-keymap', () => {
     describe('#shortcutsForCommand', () => {
 
       it('should return the shortcuts for a given command', () => {
-
         var km = new KeymapManager();
         var firstId = "id:first";
         var firstInput = "Ctrl-F";
@@ -373,7 +365,6 @@ describe('phosphor-keymap', () => {
     describe('#ie', () => {
 
       it('should not have any shortcuts set', () => {
-
         var km = new KeymapManager();
         var dummyReg = km.hasShortcut('Ctrl-X', '*');
         expect(dummyReg).to.be(false);
