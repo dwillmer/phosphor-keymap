@@ -373,10 +373,8 @@ class KeymapManager implements IKeymapManager, IDisposable {
     }
     if (preventDefault) {
       event.preventDefault();
-      event.cancelBubble = true;
       clearTimeout(this._timeoutObj);
       this._handleTimeout();
-      return;
     } else {
       if (this._timeoutObj) {
         clearTimeout(this._timeoutObj);
