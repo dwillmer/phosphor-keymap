@@ -383,11 +383,10 @@ class KeymapManager implements IKeymapManager, IDisposable {
       }
       this._timeoutState = joinedKey;
       var self = this;
-      // this._timeoutObj = setTimeout(() => {
-      //   self._timeoutObj = 0;
-      //   self._timeoutState = '';
-      // }, this._timeoutInMillis);
-      //console.log('TIMEOUT SET: ' + this._timeoutObj);
+      this._timeoutObj = setTimeout(() => {
+        self._timeoutObj = 0;
+        self._timeoutState = '';
+      }, this._timeoutInMillis);
     }
   }
 
