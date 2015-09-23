@@ -217,7 +217,6 @@ class KeymapManager implements IKeymapManager, IDisposable {
    * Unbind the event handler and clean out the state.
    */
   dispose(): void {
-    console.log('DISPOSE');
     this._unbindEvents();
     clearTimeout(this._timeoutObj);
     this._handleTimeout();
@@ -334,21 +333,7 @@ class KeymapManager implements IKeymapManager, IDisposable {
     }
   }
 
-  private _printSelMap( value: any ) {
-    console.log('\nSEL:\n');
-    for (var prop in value) {
-      if (value.hasOwnProperty(prop)) {
-        for (var second in value[prop]) {
-          if (value[prop].hasOwnProperty(second)) {
-            console.log(prop + '\t' + second + '\t' + value[prop][second]);
-          }
-        }
-      }
-    }
-  }
-
   private _evtKeyDown(event: KeyboardEvent): void {
-    console.log('EVT KEYDOWN RECEIVED');
     var modString = this._getModifierStringForEvent(event);
     if(!modString) {
       return;
@@ -362,41 +347,25 @@ class KeymapManager implements IKeymapManager, IDisposable {
       return;
     }
     var prefix = ((this._timeoutState) ? this._timeoutState + ' ' : '');
-    //console.log('TIMEOUT STATE: ' + this._timeoutState);
     var joinedKey = prefix + modsKey;
-    console.log('JOINED KEY: ' + joinedKey + joinedKey.length);
     var reduced = this._matchingSelectorMap(joinedKey);
-
-    //this._printSelMap(reduced);
 
     for (var prop in reduced) {
       if (!(reduced.hasOwnProperty(prop))) {
         continue;
       }
-      console.log('PROP: ' + prop);
       var currElem = event.target as Element;
       while (currElem !== null && !matchesSelector(currElem, prop)) {
-        console.log('MATCHES : ' + matchesSelector(currElem, prop).toString());
         currElem = currElem.parentElement;
       }
 
-      //console.log('CURR: ' + currElem);
       if (currElem !== null) {
-
-        // DEBUG
-        for (var dbg in reduced[prop]) {
-          if (reduced[prop].hasOwnProperty(dbg)) {
-            console.log("EXISTS: " + dbg + dbg.length);
-          }
-        }
-
         if (reduced[prop][joinedKey] === undefined) {
           continue;
         }
 
         for (var i = 0; i < reduced[prop][joinedKey].length; i++) {
           var cmd = reduced[prop][joinedKey][i];
-          console.log("Emitting command requested: " + prop + " " + joinedKey + " " + cmd);
           this.commandRequested.emit(cmd);
         }
         preventDefault = true;
@@ -508,16 +477,22 @@ var normaliseModifiers = function(input: string) {
   var sequences = lower.split(' ');
  
   var result = '';
+  var previousMod = '';
   for (var i=0; i<sequences.length; i++) {
     var tokens = sequences[i].split('-');
     if (tokens.length > 1) {
       var key = tokens.splice(tokens.length-1, tokens.length-1);
       tokens.sort(normOrder);
+      previousMod = tokens.join('-');
       tokens.push(key[0]);
       if (i > 0) { result += ' '; }
       result += tokens.join('-');
     } else {
-      result += ' '+tokens[0];
+      if (previousMod) {
+        result += ' ' + previousMod + '-' + tokens[0];
+      } else {
+        result += ' ' + tokens[0];
+      }
     }
   }
   return result;
