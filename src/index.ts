@@ -190,13 +190,6 @@ class KeymapManager implements IKeymapManager, IDisposable {
    * Construct a new Keymap Manager.
    */
   constructor() {
-    var br: string = browser[0];
-    if (br === 'Firefox' || br === 'Opera' || br === 'Netscape') {
-      this._keycodeModifications = MOZILLA_MODIFIERS;
-    } else if (br === 'Safari' || br === 'Chrome' || br === "MSIE") {
-      this._keycodeModifications = IE_MODIFIERS;
-    }
-
     this._bindEvents();
   }
 
@@ -371,24 +364,20 @@ class KeymapManager implements IKeymapManager, IDisposable {
         for (var i = 0; i < reduced[prop][joinedKey].length; i++) {
           var cmd = reduced[prop][joinedKey][i];
           this.commandRequested.emit(cmd);
+          event.preventDefault();
+          return;
         }
-        preventDefault = true;
       }
     }
-    if (preventDefault) {
-      event.preventDefault();
+
+    if (this._timeoutObj) {
       clearTimeout(this._timeoutObj);
-      this._handleTimeout();
-    } else {
-      if (this._timeoutObj) {
-        clearTimeout(this._timeoutObj);
-      }
-      this._timeoutState = joinedKey;
-      this._timeoutObj = setTimeout(() => {
-        this._timeoutObj = 0;
-        this._timeoutState = '';
-      }, this._timeoutInMillis);
     }
+    this._timeoutState = joinedKey;
+    this._timeoutObj = setTimeout(() => {
+      this._timeoutObj = 0;
+      this._timeoutState = '';
+    }, this._timeoutInMillis);
   }
 
   private _handleTimeout(): void {
@@ -398,8 +387,8 @@ class KeymapManager implements IKeymapManager, IDisposable {
 
   private _getKeyChars(code: number): string {
     var strCode = code.toString();
-    if (strCode in this._keycodeModifications) {
-      return this._keycodeModifications[strCode];
+    if (strCode in USER_MODS) {
+      return USER_MODS[strCode];
     } else if (strCode in KEYCODES) { 
       return KEYCODES[strCode];
     }
@@ -443,7 +432,6 @@ class KeymapManager implements IKeymapManager, IDisposable {
     document.removeEventListener("keydown", this);
   }
 
-  private _keycodeModifications: StringMap = {};
   private _scopeCommandMap: SelectorMap = {};
   private _scopeSequenceMap: SelectorMap = {};
   private _timeoutInMillis = 750;
@@ -542,3 +530,13 @@ var browser: any = (function(): any {
   M = M ? [M[1], M[2]] : [N, navigator.appVersion, '-?'];
   return M;
 })();
+
+
+var BROWSER: string = browser[0];
+var USER_MODS: StringMap = {}
+if (BROWSER === 'Firefox' || BROWSER === 'Opera' || BROWSER === 'Netscape') {
+    USER_MODS = MOZILLA_MODIFIERS;
+} else if (BROWSER === 'Safari' || BROWSER === 'Chrome' || BROWSER === "MSIE") {
+    USER_MODS = IE_MODIFIERS;
+}
+

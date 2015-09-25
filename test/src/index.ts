@@ -207,7 +207,7 @@ describe('phosphor-keymap', () => {
 
     describe('#registerBindings mozilla', () => {
 
-      it('should allow multiple commands per key binding', () => {
+      it('should not allow multiple commands per key binding', () => {
         var km = new KeymapManager();
         var testId = "test:id";
         var testInput = "Ctrl-Alt-L";
@@ -244,7 +244,7 @@ describe('phosphor-keymap', () => {
         var keyEvent = genKeyboardEvent({keyCode: 76, ctrlKey: true, altKey: true});
         document.body.dispatchEvent(keyEvent);
 
-        expect(id).to.be(secondId);
+        expect(id).to.be(testId);
 
         regSeq.dispose();
         regBindingRepeat.dispose();
