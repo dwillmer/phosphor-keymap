@@ -45,11 +45,14 @@
   },
   "files": [
     "lib/index.js",
-    "lib/index.d.ts"
+    "lib/index.d.ts",
+    "lib/keystrokes.js",
+    "lib/keystrokes.d.ts"
   ],
   "keywords": [
     "keymap",
     "keyboard",
+    "keystroke",
     "key",
     "map",
     "shortcut"
