@@ -37,7 +37,7 @@ var genKeyboardEvent = function(options: any): KeyboardEvent {
 
 
 describe('phosphor-keymap', () => {
-  
+
   describe('KeymapManager', () => {
 
     describe('#keycodes mozilla', () => {
@@ -278,7 +278,7 @@ describe('phosphor-keymap', () => {
 
         multiKeyBind.dispose();
         km.dispose();
-        
+
       });
 
       it('should fire on multiple keydown events', () => {
@@ -377,8 +377,3 @@ describe('phosphor-keymap', () => {
   });
 
 });
-
-
-
-
-

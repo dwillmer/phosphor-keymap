@@ -6,7 +6,7 @@ module.exports = function (config) {
     preprocessors: { 'build/index.js': ['browserify'] },
     browserify: {
       debug: true,
-      transform: ['browserify-css', 'browserify-istanbul']
+      transform: ['browserify-istanbul']
     },
     files: ['build/index.js'],
     coverageReporter: {
