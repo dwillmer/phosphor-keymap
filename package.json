@@ -28,10 +28,12 @@
   },
   "scripts": {
     "clean": "rimraf lib && rimraf test/build && rimraf test/coverage",
+    "clean:example": "rimraf example/*.js",
     "build:src": "tsc --project src",
     "build:test": "tsc --project test/src",
     "build": "npm run build:src && npm run build:test",
     "docs": "rimraf docs/api && typedoc --options scripts/tdoptions.json",
+    "build:example": "tsc --project example && browserify example/index.js -o example/bundle.js",
     "prepublish": "npm run build",
     "test:chrome": "karma start --browsers=Chrome test/karma.conf.js",
     "test:coverage": "karma start test/karma-cov.conf.js",
