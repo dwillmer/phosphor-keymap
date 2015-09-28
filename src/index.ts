@@ -8,16 +8,16 @@
 'use strict';
 
 import {
+  calculateSpecificity, isSelectorValid
+} from 'clear-cut';
+
+import {
   DisposableDelegate, IDisposable
 } from 'phosphor-disposable';
 
 import {
   isModifierKeyCode, keystrokeForKeydownEvent, normalizeKeystroke
 } from './keycodes';
-
-import {
-  calculateSpecificity, isValidSelector, matchesSelector
-} from './selectors';
 
 
 /**
@@ -30,34 +30,38 @@ interface IKeyBinding {
    *
    * Each keystroke must adhere to the following format:
    *
-   *   `[<modifier-1>-[<modifier-2>-[<modifier-n>-]]]<key>`
+   *   `[<modifier-1>+[<modifier-2>+[<modifier-n>+]]]<key>`
    *
-   *   - Supported modifiers: `ctrl`, `alt`, `shift`, `meta`.
+   *   - Supported modifiers are `'ctrl'`, `'alt'`, `'shift'`, `'cmd'`.
+   *   - The `'cmd'` modifier only works on OSX (browser limitation).
    *   - The modifiers may appear in any order.
    *   - The modifiers cannot appear in duplicate.
    *   - The primary key must be a valid key character.
-   *   - The keystroke is case-insensitive.
+   *   - The keystroke is case insensitive.
    *   - Mutliple keystrokes are separated by whitespace.
    *
    * #### Example
    * **Valid Key Sequences**
    * ``` typescript
    * 'a'
-   * 'B'
-   * 'Ctrl--'
-   * 'Ctrl-Alt-5'
-   * 'Shift-F11'
-   * 'Ctrl-K Ctrl-T'
-   * 'Meta-Alt-Y Ctrl-4 Alt-]'
+   * 'b'
+   * 'd d'
+   * 'ctrl+-'
+   * 'ctrl+='
+   * 'ctrl+alt+5'
+   * 'shift+f11'
+   * 'ctrl+k ctrl+t'
+   * 'alt+cmd+y ctrl+4 alt+]'
    * ```
    *
    * **Invalid Key Sequences**
    * ```typescript
    * '%'
    * '$'
-   * '-Ctrl-A'
-   * 'Shift--T'
-   * 'Ctrl-A Shift'
+   * 'ctrl-a'
+   * '+ctrl+a'
+   * 'shift++o'
+   * 'ctrl+a shift'
    * ```
    */
   sequence: string;
@@ -77,7 +81,7 @@ interface IKeyBinding {
  * A class which manages a collection of key bindings.
  */
 export
-class Keymap {
+class KeymapManager {
   /**
    * Construct a new key map.
    */
@@ -102,7 +106,7 @@ class Keymap {
    */
   add(selector: string, bindings: IKeyBinding[]): IDisposable {
     // Log a warning and bail if the selector is invalid.
-    if (!isValidSelector(selector)) {
+    if (!isSelectorValid(selector)) {
       console.warn(`Invalid key binding selector: ${selector}`);
       return void 0;
     }
@@ -196,6 +200,9 @@ class Keymap {
     }
 
     // Restart the timer for equal intervals between keystrokes.
+    //
+    // TODO - we may want to replay prevented defaults if match fails.
+    event.preventDefault();
     this._startTimer();
   }
 
@@ -260,7 +267,7 @@ class Keymap {
   }
 
   private _timer = 0;
-  private _partialTimeout = 750;
+  private _partialTimeout = 1000;
   private _keystrokes: string[] = [];
   private _bindings: ExBinding[] = [];
   private _exactData: IExactData = null;
@@ -391,11 +398,12 @@ interface IMatchResult {
 function findSequenceMatches(bindings: ExBinding[], sequence: string): IMatchResult {
   var exact: ExBinding[] = [];
   var partial: ExBinding[] = [];
+  var partialSequence = sequence + ' ';
   for (var i = 0, n = bindings.length; i < n; ++i) {
     var exb = bindings[i];
     if (exb.isExactMatch(sequence)) {
       exact.push(exb);
-    } else if (exb.isPartialMatch(sequence)) {
+    } else if (exb.isPartialMatch(partialSequence)) {
       partial.push(exb);
     }
   }
@@ -438,3 +446,35 @@ function dispatchBindings(bindings: ExBinding[], event: KeyboardEvent): void {
     target = target.parentElement;
   }
 }
+
+
+/**
+ * Test whether an element matches a CSS selector.
+ */
+export
+function matchesSelector(elem: Element, selector: string): boolean {
+  return protoMatchFunc.call(elem, selector);
+}
+
+
+/**
+ * A cross-browser CSS selector matching prototype function.
+ *
+ * The function must be called with the element as `this`.
+ */
+var protoMatchFunc: Function = (() => {
+  var proto = Element.prototype as any;
+  return (
+    proto.matches ||
+    proto.matchesSelector ||
+    proto.mozMatchesSelector ||
+    proto.msMatchesSelector ||
+    proto.oMatchesSelector ||
+    proto.webkitMatchesSelector ||
+    (function(selector: string) {
+      var elem = this as Element;
+      var matches = elem.ownerDocument.querySelectorAll(selector);
+      return Array.prototype.indexOf.call(matches, elem) !== -1;
+    })
+  );
+})();
