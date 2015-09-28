@@ -452,7 +452,6 @@ function dispatchBindings(bindings: ExBinding[], event: KeyboardEvent): void {
 /**
  * Test whether an element matches a CSS selector.
  */
-export
 function matchesSelector(elem: Element, selector: string): boolean {
   return protoMatchFunc.call(elem, selector);
 }
