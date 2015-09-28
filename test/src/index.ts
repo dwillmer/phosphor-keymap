@@ -10,7 +10,7 @@
 import expect = require('expect.js');
 
 import {
-  Keymap, IKeyBinding
+  IKeyBinding, KeymapManager
 } from '../../lib/index';
 
 
