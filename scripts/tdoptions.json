@@ -6,6 +6,7 @@
   "mode": "file",
   "out": "docs/api",
   "src": [
+    "typings/clear-cut/clear-cut.d.ts",
     "src/index.ts"
   ]
 }
