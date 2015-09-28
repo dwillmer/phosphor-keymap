@@ -39,10 +39,10 @@ function isModifierKeyCode(code: number): boolean {
 export
 function keystrokeForKeydownEvent(event: KeyboardEvent): string {
   var prefix = '';
-  if (event.ctrlKey) prefix += 'ctrl-';
-  if (event.altKey) prefix += 'alt-';
-  if (event.shiftKey) prefix += 'shift-';
-  if (event.metaKey) prefix += 'meta-';
+  if (event.ctrlKey) prefix += 'ctrl+';
+  if (event.altKey) prefix += 'alt+';
+  if (event.shiftKey) prefix += 'shift+';
+  if (event.metaKey) prefix += 'cmd+';
   return prefix + keyForKeyCode(event.keyCode);
 }
 
@@ -72,18 +72,18 @@ function normalizeKeystroke(keystroke: string): string {
   var key = '';
   var sep = false;
   var alt = false;
+  var cmd = false;
   var ctrl = false;
-  var meta = false;
   var shift = false;
-  var tokens = keystroke.toLowerCase().split(/(-)/).filter(s => !!s);
+  var tokens = keystroke.toLowerCase().split(/(\+)/).filter(s => !!s);
   for (var i = 0, n = tokens.length; i < n; ++i) {
     var token = tokens[i];
-    if (token === '-') {
+    if (token === '+') {
       if (key) {
         throwKeystrokeError(keystroke);
       } else if ((i === n - 1) && (n === 1 || sep)) {
         key = token;
-      } else if (!sep && (alt || ctrl || meta || shift)) {
+      } else if (!sep && (alt || cmd || ctrl || shift)) {
         sep = true;
       } else {
         throwKeystrokeError(keystroke);
@@ -94,17 +94,17 @@ function normalizeKeystroke(keystroke: string): string {
       }
       alt = true;
       sep = false;
+    } else if (token === 'cmd') {
+      if (cmd || key) {
+        throwKeystrokeError(keystroke);
+      }
+      cmd = true;
+      sep = false;
     } else if (token === 'ctrl') {
       if (ctrl || key) {
         throwKeystrokeError(keystroke);
       }
       ctrl = true;
-      sep = false;
-    } else if (token === 'meta') {
-      if (meta || key) {
-        throwKeystrokeError(keystroke);
-      }
-      meta = true;
       sep = false;
     } else if (token === 'shift') {
       if (shift || key) {
@@ -113,7 +113,7 @@ function normalizeKeystroke(keystroke: string): string {
       shift = true;
       sep = false;
     } else {
-      if (key || !(token in KEY_CODE_MAP_INV)) {
+      if (key || token === 'meta' || !(token in KEY_CODE_MAP_INV)) {
         throwKeystrokeError(keystroke);
       }
       key = token;
@@ -124,10 +124,10 @@ function normalizeKeystroke(keystroke: string): string {
     throwKeystrokeError(keystroke);
   }
   var prefix = '';
-  if (ctrl) prefix += 'ctrl-';
-  if (alt) prefix += 'alt-';
-  if (shift) prefix += 'shift-';
-  if (meta) prefix += 'meta-';
+  if (ctrl) prefix += 'ctrl+';
+  if (alt) prefix += 'alt+';
+  if (shift) prefix += 'shift+';
+  if (cmd) prefix += 'cmd+';
   return prefix + key;
 }
 
