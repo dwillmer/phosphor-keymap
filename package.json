@@ -5,7 +5,7 @@
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "dependencies": {
-    "phosphor-signaling": "^1.1.0",
+    "clear-cut": "^2.0.1",
     "phosphor-disposable": "^1.0.3"
   },
   "devDependencies": {
@@ -46,8 +46,10 @@
   "files": [
     "lib/index.js",
     "lib/index.d.ts",
-    "lib/keystrokes.js",
-    "lib/keystrokes.d.ts"
+    "lib/keycodes.js",
+    "lib/keycodes.d.ts",
+    "lib/selectors.js",
+    "lib/selectors.d.ts"
   ],
   "keywords": [
     "keymap",
