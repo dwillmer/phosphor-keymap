@@ -9,7 +9,11 @@
 
 
 /**
+ * Test whether a key code represents a modifier key.
  *
+ * @param code - The key code of interest.
+ *
+ * @returns `true` if the code is a modifier key, `false` otherwise.
  */
 export
 function isModifierKeyCode(code: number): boolean {
@@ -25,16 +29,16 @@ function isModifierKeyCode(code: number): boolean {
 
 
 /**
- * Create a normalize keystroke for a 'keydown' event.
+ * Create a normalize keystroke for a `'keydown'` event.
  *
- * @param event - The event object for a 'keydown' event.
+ * @param event - The event object for a `'keydown'` event.
  *
  * @returns The normalized keystroke string for the event.
  *
  * #### Notes
  * This function uses the `keyCode` property of the event to determine
- * which key was pressed. This code will not be correct for 'keypress'
- * event, so this function must only be used for a 'keydown' event.
+ * which key was pressed. The code will be incorrect for a `'keypress'`
+ * event, so this function must only be used for a `'keydown'` event.
  */
 export
 function keystrokeForKeydownEvent(event: KeyboardEvent): string {
@@ -57,13 +61,14 @@ function keystrokeForKeydownEvent(event: KeyboardEvent): string {
  * #### Notes
  * The keystroke must adhere to the following format:
  *
- *   `[<modifier-1>-[<modifier-2>-[<modifier-n>-]]]<key>`
+ *   `[<modifier-1>+[<modifier-2>+[<modifier-n>+]]]<key>`
  *
- *   - Supported modifiers: 'ctrl', 'alt', 'shift', 'meta'.
+ *   - Supported modifiers are `'ctrl'`, `'alt'`, `'shift'`, `'cmd'`.
+ *   - The `'cmd'` modifier only works on OSX (browser limitation).
  *   - The modifiers may appear in any order.
  *   - The modifiers cannot appear in duplicate.
  *   - The primary key must be a valid key character.
- *   - The keystroke is case-insensitive.
+ *   - The keystroke is case insensitive.
  *
  * If the key does not adhere to the format, an error will be thrown.
  */
