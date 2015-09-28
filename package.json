@@ -9,6 +9,7 @@
     "phosphor-disposable": "^1.0.3"
   },
   "devDependencies": {
+    "browserify": "^11.2.0",
     "browserify-istanbul": "^0.2.1",
     "coveralls": "^2.11.4",
     "expect.js": "^0.3.1",
