@@ -202,6 +202,7 @@ class KeymapManager {
     // Restart the timer for equal intervals between keystrokes.
     //
     // TODO - we may want to replay prevented defaults if match fails.
+    //      - we may also want to stop propagation until match fails.
     event.preventDefault();
     this._startTimer();
   }
