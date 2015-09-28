@@ -9,6 +9,22 @@
 
 
 /**
+ *
+ */
+export
+function isModifierKeyCode(code: number): boolean {
+  switch (KEY_CODE_MAP[code]) {
+  case 'alt':
+  case 'ctrl':
+  case 'meta':
+  case 'shift':
+    return true;
+  }
+  return false;
+}
+
+
+/**
  * Create a normalize keystroke for a 'keydown' event.
  *
  * @param event - The event object for a 'keydown' event.
@@ -36,15 +52,14 @@ function keystrokeForKeydownEvent(event: KeyboardEvent): string {
  *
  * @param keystroke - The keystroke to normalize.
  *
- * @returns The order- and case- normalized keystroke.
- *
- * @throws An error if the keystroke is invalid.
+ * @returns The lower cased and canonically ordered keystroke.
  *
  * #### Notes
  * The keystroke must adhere to the following format:
  *
  *   `[<modifier-1>-[<modifier-2>-[<modifier-n>-]]]<key>`
  *
+ *   - Supported modifiers: 'ctrl', 'alt', 'shift', 'meta'.
  *   - The modifiers may appear in any order.
  *   - The modifiers cannot appear in duplicate.
  *   - The primary key must be a valid key character.
@@ -60,7 +75,7 @@ function normalizeKeystroke(keystroke: string): string {
   var ctrl = false;
   var meta = false;
   var shift = false;
-  var tokens = keystroke.toLowerCase().split(/(-)/g).filter(s => !!s);
+  var tokens = keystroke.toLowerCase().split(/(-)/).filter(s => !!s);
   for (var i = 0, n = tokens.length; i < n; ++i) {
     var token = tokens[i];
     if (token === '-') {
