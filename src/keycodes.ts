@@ -58,6 +58,8 @@ function keystrokeForKeydownEvent(event: KeyboardEvent): string {
  *
  * @returns The lower cased and canonically ordered keystroke.
  *
+ * @throws An error if the keystroke has an invalid format.
+ *
  * #### Notes
  * The keystroke must adhere to the following format:
  *
@@ -84,15 +86,10 @@ function normalizeKeystroke(keystroke: string): string {
   for (var i = 0, n = tokens.length; i < n; ++i) {
     var token = tokens[i];
     if (token === '+') {
-      if (key) {
-        throwKeystrokeError(keystroke);
-      } else if ((i === n - 1) && (n === 1 || sep)) {
-        key = token;
-      } else if (!sep && (alt || cmd || ctrl || shift)) {
-        sep = true;
-      } else {
+      if (sep || key || !(alt || cmd || ctrl || shift)) {
         throwKeystrokeError(keystroke);
       }
+      sep = true;
     } else if (token === 'alt') {
       if (alt || key) {
         throwKeystrokeError(keystroke);
