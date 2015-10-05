@@ -50,7 +50,9 @@
     "lib/index.js",
     "lib/index.d.ts",
     "lib/keycodes.js",
-    "lib/keycodes.d.ts"
+    "lib/keycodes.d.ts",
+    "lib/manager.js",
+    "lib/manager.d.ts"
   ],
   "keywords": [
     "keymap",
