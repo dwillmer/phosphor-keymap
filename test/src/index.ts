@@ -10,7 +10,11 @@
 import expect = require('expect.js');
 
 import {
-  IKeyBinding, KeymapManager
+  DisposableDelegate
+} from 'phosphor-disposable';
+
+import {
+  IKeyBinding, KeymapManager, normalizeKeystroke
 } from '../../lib/index';
 
 
@@ -143,7 +147,7 @@ describe('phosphor-keymap', () => {
         };
 
         var keyEventK = genKeyboardEvent({ keyCode: 75, ctrlKey: true });
-        var keyEventL = genKeyboardEvent({ keyCode: 76, ctrlKey: true});
+        var keyEventL = genKeyboardEvent({ keyCode: 76, ctrlKey: true });
 
         var disposable = keymap.add('*', [binding]);
 
@@ -449,64 +453,16 @@ describe('phosphor-keymap', () => {
     describe('normalizeKeystrokes', () => {
 
       it('should not register invalid keystrokes', () => {
-        var keymap = new KeymapManager();
-        var listener = (event: KeyboardEvent) => {
-          keymap.processKeydownEvent(event);
-        };
-        document.addEventListener('keydown', listener);
-
-        var genBinding = (input: string): any => {
-          return { sequence: input, handler: (): boolean => { return true; } };
-        };
-
-        var a = genBinding('ctrls+q');
-        var aDisp = keymap.add('*', [a]);
-        
-        var b = genBinding('shiftxtrl+^');
-        var bDisp = keymap.add('*', [b]);
-        
-        var c = genBinding('altcmd+d');
-        var cDisp = keymap.add('.first .second', [c]);
-        
-        var d = genBinding('ctrl+d');
-        var dDisp = keymap.add('.first .second .third', [d]);
-       
-        var e = genBinding('ctrl+alt+ctrl+E');
-        var eDisp = keymap.add('.third .second', [e]);
-        
-        var f = genBinding('alt+ctrl+shift+alt+shift+Q');
-        var fDisp = keymap.add('.second .first', [f]);
-        
-        var g = genBinding('shift+ctrl+shift+x');
-        var gDisp = keymap.add('.third .first', [g]);
-        
-        var h = genBinding('cmd+shift+alt+cmd+X');
-        var hDisp = keymap.add('.first .second', [h]);
-        
-        var i = genBinding('i');
-        var iDisp = keymap.add('.first .second', [i]);
-
-        var j = genBinding('+J');
-        var jDisp = keymap.add('.first .second', [j]);
-
-        var k = genBinding('j+');
-        var kDisp = keymap.add('.first .second', [k]);
-          
-        var keyEvent = genKeyboardEvent({ keyCode: 68, ctrlKey: true });
-        document.body.dispatchEvent(keyEvent);
-
-        aDisp.dispose();
-        bDisp.dispose();
-        cDisp.dispose();
-        dDisp.dispose();
-        eDisp.dispose();
-        fDisp.dispose();
-        gDisp.dispose();
-        hDisp.dispose();
-        iDisp.dispose();
-        jDisp.dispose();
-        kDisp.dispose();
-        document.removeEventListener('keydown', listener);
+        expect(() => normalizeKeystroke('ctrls+q')).to.throwError();
+        expect(() => normalizeKeystroke('shiftxtrl+^')).to.throwError();
+        expect(() => normalizeKeystroke('altcmd+d')).to.throwError();
+        expect(() => normalizeKeystroke('ctrl+alt+ctrl+E')).to.throwError();
+        expect(() => normalizeKeystroke('alt+ctrl+shift+alt+shift+Q')).to.throwError();
+        expect(() => normalizeKeystroke('shift+ctrl+shift+x')).to.throwError();
+        expect(() => normalizeKeystroke('cmd+shift+alt+cmd+X')).to.throwError();
+        expect(normalizeKeystroke('i')).to.be('i');
+        expect(() => normalizeKeystroke('+J')).to.throwError();
+        expect(() => normalizeKeystroke('j+')).to.throwError();
 
       });
 
