@@ -9,26 +9,6 @@
 
 
 /**
- * Test whether a key code represents a modifier key.
- *
- * @param code - The key code of interest.
- *
- * @returns `true` if the code is a modifier key, `false` otherwise.
- */
-export
-function isModifierKeyCode(code: number): boolean {
-  switch (KEY_CODE_MAP[code]) {
-  case 'alt':
-  case 'ctrl':
-  case 'meta':
-  case 'shift':
-    return true;
-  }
-  return false;
-}
-
-
-/**
  * Create a normalize keystroke for a `'keydown'` event.
  *
  * @param event - The event object for a `'keydown'` event.
