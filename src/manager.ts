@@ -36,16 +36,15 @@ interface IKeyBinding {
   /**
    * The key sequence for the key binding.
    *
-   * Each keystroke must adhere to the following format:
-   *
+   * Each keystroke in the sequence must adhere to the format:
+   * - TODO
    */
   sequence: string[];
 
   /**
-   * The handler function to invoke when the key sequence is matched.
-   *
+   * The handler function to invoke when the key binding is matched.
    */
-  handler: (arg: any) => void;
+  handler: () => void;
 }
 
 
@@ -74,6 +73,8 @@ class KeymapManager {
    * the binding with the highest CSS specificity is executed first.
    * Ties in specificity are broken based on the order in which the
    * key bindings are added to the manager.
+   *
+   * Ambiguous key bindings are resolved with a timeout.
    */
   add(bindings: IKeyBinding[]): IDisposable {
     // Iterate over the bindings and convert to extended bindings.
@@ -143,9 +144,9 @@ class KeymapManager {
     // Restart the timer to get equal intervals between keystrokes.
     //
     // TODO
-    // - we may want to replay prevented defaults if a match fails.
-    // - we may want to stop propagation until a match fails.
+    // - we may want to replay events if an exact match fails.
     event.preventDefault();
+    event.stopPropagation();
     this._startTimer();
   }
 
@@ -211,11 +212,6 @@ interface IExBinding extends IKeyBinding {
    * The specificity of the CSS selector.
    */
   specificity: number;
-
-  /**
-   * A unique tie-breaking id number for the key binding.
-   */
-  id: number;
 }
 
 
@@ -252,12 +248,6 @@ interface IMatchResult {
 
 
 /**
- * A monotonically increasing ex binding id number.
- */
-var bindingId = 0;
-
-
-/**
  * Create an extended key binding from a user key binding.
  *
  * If the user key binding is invalid, a warning will be logged
@@ -283,27 +273,11 @@ function createExBinding(binding: IKeyBinding): IExBinding {
     return null;
   }
   return {
-    id: bindingId++,
     sequence: sequence,
     handler: binding.handler,
     selector: binding.selector,
     specificity: calculateSpecificity(binding.selector),
   };
-}
-
-
-/**
- * A comparison function for extended bindings.
- *
- * This can be used to sort an array of bindings according to the
- * highest CSS specificity. Ties are broken using the binding id,
- * with newer bindings appearing first.
- */
-function exBindingCmp(first: IExBinding, second: IExBinding): number {
-  if (first.specificity === second.specificity) {
-    return second.id - first.id;
-  }
-  return second.specificity - first.specificity;
 }
 
 
@@ -315,6 +289,8 @@ const enum SequenceMatch { None, Exact, Partial };
 
 /**
  * Test whether an ex binding matches a key sequence.
+ *
+ * Returns a `SequenceMatch` value indicating the type of match.
  */
 function matchSequence(exb: IExBinding, sequence: string[]): SequenceMatch {
   if (exb.sequence.length < sequence.length) {
@@ -334,6 +310,8 @@ function matchSequence(exb: IExBinding, sequence: string[]): SequenceMatch {
 
 /**
  * Find the extended bindings which match a key sequence.
+ *
+ * Returns a match result which contains the exact and partial matches.
  */
 function findSequenceMatches(bindings: IExBinding[], sequence: string[]): IMatchResult {
   var exact: IExBinding[] = [];
@@ -351,13 +329,22 @@ function findSequenceMatches(bindings: IExBinding[], sequence: string[]): IMatch
 
 
 /**
- * Find the extended bindings with a matching CSS selector.
+ * Find the best matching binding for the given target element.
  *
- * The resulting array will be sorted in binding sort order.
+ * Returns `undefined` if no matching binding is found.
  */
-function findSelectorMatches(bindings: IExBinding[], target: Element): IExBinding[] {
-  var result = bindings.filter(exb => matchesSelector(target, exb.selector));
-  return result.sort(exBindingCmp);
+function findBestMatch(bindings: IExBinding[], target: Element): IExBinding {
+  var result: IExBinding = void 0;
+  for (var i = 0, n = bindings.length; i < n; ++i) {
+    var exb = bindings[i];
+    if (!matchesSelector(target, exb.selector)) {
+      continue;
+    }
+    if (!result || exb.specificity >= result.specificity) {
+      result = exb;
+    }
+  }
+  return result;
 }
 
 
@@ -365,27 +352,20 @@ function findSelectorMatches(bindings: IExBinding[], target: Element): IExBindin
  * Dispatch the key bindings for the given keyboard event.
  *
  * As the dispatcher walks up the DOM, the bindings will be filtered
- * for matching selectors, and invoked in specificity order.
- *
- * // If the
- * // handler for a binding returns `true`, dispatch will terminate and
- * // the event propagation will be stopped.
+ * for the best matching keybinding. If a match is found, the handler
+ * is invoked and event propagation is stopped.
  */
 function dispatchBindings(bindings: IExBinding[], event: KeyboardEvent): void {
   var target = event.target as Element;
-  var current = event.currentTarget as Element;
   while (target) {
-    var matches = findSelectorMatches(bindings, target);
-    for (var i = 0, n = matches.length; i < n; ++i) {
-      matches[i].handler.call(void 0);
-      return; // TODO
-      // if (matches[i].invoke()) {
-      //   event.preventDefault();
-      //   event.stopPropagation();
-      //   return;
-      // }
+    var match = findBestMatch(bindings, target);
+    if (match) {
+      event.preventDefault();
+      event.stopPropagation();
+      match.handler.call(void 0);
+      return;
     }
-    if (target === current) {
+    if (target === event.currentTarget) {
       return;
     }
     target = target.parentElement;
