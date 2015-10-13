@@ -16,7 +16,7 @@ import {
 } from 'phosphor-disposable';
 
 import {
-  isModifierKeyCode, keystrokeForKeydownEvent, normalizeKeystroke
+  keystrokeForKeydownEvent, normalizeKeystroke
 } from './keycodes';
 
 
@@ -26,54 +26,26 @@ import {
 export
 interface IKeyBinding {
   /**
+   * The CSS selector for the key binding.
+   *
+   * This selector must match a node on the propagation path of the
+   * keyboard event in order for the binding handler to be invoked.
+   */
+  selector: string;
+
+  /**
    * The key sequence for the key binding.
    *
    * Each keystroke must adhere to the following format:
    *
-   *   `[<modifier-1>+[<modifier-2>+[<modifier-n>+]]]<key>`
-   *
-   *   - Supported modifiers are `'ctrl'`, `'alt'`, `'shift'`, `'cmd'`.
-   *   - The `'cmd'` modifier only works on OSX (browser limitation).
-   *   - The modifiers may appear in any order.
-   *   - The modifiers cannot appear in duplicate.
-   *   - The primary key must be a valid key character.
-   *   - The keystroke is case insensitive.
-   *   - Mutliple keystrokes are separated by whitespace.
-   *
-   * #### Example
-   * **Valid Key Sequences**
-   * ``` typescript
-   * 'a'
-   * 'b'
-   * 'd d'
-   * 'ctrl+-'
-   * 'ctrl+='
-   * 'ctrl+alt+5'
-   * 'shift+f11'
-   * 'ctrl+k ctrl+t'
-   * 'alt+cmd+y ctrl+4 alt+]'
-   * ```
-   *
-   * **Invalid Key Sequences**
-   * ```typescript
-   * '%'
-   * '$'
-   * 'ctrl-a'
-   * '+ctrl+a'
-   * 'shift++o'
-   * 'ctrl+a shift'
-   * ```
    */
-  sequence: string;
+  sequence: string[];
 
   /**
    * The handler function to invoke when the key sequence is matched.
    *
-   * The handler should return `true` to prevent the default and stop
-   * propagation of the key event. It should return `false` to allow
-   * the continued processing of the event.
    */
-  handler: () => boolean;
+  handler: (arg: any) => void;
 }
 
 
@@ -83,96 +55,67 @@ interface IKeyBinding {
 export
 class KeymapManager {
   /**
-   * Construct a new key map.
+   * Construct a new key map manager.
    */
   contstructor() { }
 
   /**
-   * Add key bindings to the key map.
+   * Add key bindings to the key map manager.
    *
-   * @param selector - The CSS selector for the key bindings.
+   * @param bindings - The key bindings to add to the manager.
    *
-   * @param bindings - The key bindings to add to the key map.
-   *
-   * @returns A disposable which will remove the key bindings.
+   * @returns A disposable which removes the added key bindings.
    *
    * #### Notes
-   * If the selector is an invalid CSS selector, a warning will
-   * be logged to the console and `undefined` will be returned.
+   * If a key binding is invalid, a warning will be logged to the
+   * console and the offending key binding will be ignored.
    *
-   * If the key sequence for a binding is invalid, or if a binding
-   * has a null handler, a warning will be logged to the console
-   * and that binding will be ignored.
+   * If multiple key bindings are registered for the same sequence,
+   * the binding with the highest CSS specificity is executed first.
+   * Ties in specificity are broken based on the order in which the
+   * key bindings are added to the manager.
    */
-  add(selector: string, bindings: IKeyBinding[]): IDisposable {
-    // Log a warning and bail if the selector is invalid.
-    if (!isSelectorValid(selector)) {
-      console.warn(`Invalid key binding selector: ${selector}`);
-      return void 0;
-    }
-
-    // The newly created ex bindings for the valid key bindings.
-    var newBindings: ExBinding[] = [];
-
-    // Iterate over the bindings and covert them into ex bindings.
+  add(bindings: IKeyBinding[]): IDisposable {
+    // Iterate over the bindings and convert to extended bindings.
+    var exbArray: IExBinding[] = [];
     for (var i = 0, n = bindings.length; i < n; ++i) {
-      var binding = bindings[i];
-
-      // If the binding does not have a handler, warn and continue.
-      if (!binding.handler) {
-        console.warn(`null handler for key binding: ${binding.sequence}`);
-        continue;
-      }
-
-      // Trim the key sequence and split into individual keystrokes.
-      var keystrokes = binding.sequence.trim().split(/\s+/);
-
-      // Normalize each keystroke and re-join into a canoncial form.
-      // If any of the keystrokes are invalid, warn and continue.
-      try {
-        var sequence = keystrokes.map(normalizeKeystroke).join(' ');
-      } catch (e) {
-        console.warn(`invalid key binding sequence: ${binding.sequence}`);
-        continue;
-      }
-
-      // Create a new extended binding and add it to the arrays.
-      var exb = new ExBinding(selector, sequence, binding.handler);
-      this._bindings.push(exb);
-      newBindings.push(exb);
+      var exb = createExBinding(bindings[i]);
+      if (exb) exbArray.push(exb);
     }
 
-    // Return a disposable which will remove the new bindings.
-    return new DisposableDelegate(() => this._removeBindings(newBindings));
+    // Register the bindings with the manager.
+    Array.prototype.push.apply(this._bindings, exbArray);
+
+    // Return a disposable which will remove the registered bindings.
+    return new DisposableDelegate(() => this._removeBindings(exbArray));
   }
 
   /**
-   * Process a `'keydown'` event and invoke the matching key bindings.
+   * Process a `'keydown'` event and invoke the matching bindings.
    *
    * @param event - The event object for a `'keydown'` event.
    *
    * #### Notes
-   * This should be called by user code in response to a `'keydown'`
-   * event. The keymap **does not** install its own event listeners,
-   * which allows user code full control over the nodes for which
-   * the keymap processes events.
+   * This should be called in response to a `'keydown'` event in order
+   * to invoke the handlers of the matching key bindings.
+   *
+   * The manager **does not** install its own key event listeners. This
+   * allows user code full control over the nodes for which the keymap
+   * processes events.
    */
   processKeydownEvent(event: KeyboardEvent): void {
-    // If the actual pressed key is a modifier key, prevent the default
-    // and return. No bindings can be matched for *just* modifier keys.
-    if (isModifierKeyCode(event.keyCode)) {
-      event.preventDefault();
+    // Get the canonical keystroke for the keydown event. Bail
+    // early if the event does not represent a valid keystroke.
+    var keystroke = keystrokeForKeydownEvent(event);
+    if (!keystroke) {
       return;
     }
 
-    // Get the normalized keystroke and store it as a pending.
-    this._keystrokes.push(keystrokeForKeydownEvent(event));
-
-    // Convert the pending keystrokes to a sequence.
-    var sequence = this._keystrokes.join(' ');
+    // Add the keystroke to the current key sequence.
+    this._sequence.push(keystroke);
 
     // Find the exact and partial matches for the key sequence.
-    var matches = findSequenceMatches(this._bindings, sequence);
+    var matches = findSequenceMatches(this._bindings, this._sequence);
 
     // If there are no exact match and not partial matches, clear
     // all pending state so the next key press starts from default.
@@ -190,28 +133,27 @@ class KeymapManager {
       return;
     }
 
-    // At this point, there are partial matches.
-
     // If there are exact matches and partial matches, the exact
     // matches are stored so they can be dispatched if the timer
     // expires before a more specific match is found.
     if (matches.exact.length > 0) {
-      this._setExactData(matches.exact, event);
+      this._exactData = { exact: matches.exact, event: event };
     }
 
-    // Restart the timer for equal intervals between keystrokes.
+    // Restart the timer to get equal intervals between keystrokes.
     //
-    // TODO - we may want to replay prevented defaults if match fails.
-    //      - we may also want to stop propagation until match fails.
+    // TODO
+    // - we may want to replay prevented defaults if a match fails.
+    // - we may want to stop propagation until a match fails.
     event.preventDefault();
     this._startTimer();
   }
 
   /**
-   * Remove an array of ex key bindings from the key map.
+   * Remove an array of ex bindings from the key map.
    */
-  private _removeBindings(arr: ExBinding[]): void {
-    this._bindings = this._bindings.filter(b => arr.indexOf(b) === -1);
+  private _removeBindings(array: IExBinding[]): void {
+    this._bindings = this._bindings.filter(exb => array.indexOf(exb) === -1);
   }
 
   /**
@@ -221,7 +163,7 @@ class KeymapManager {
     this._clearTimer();
     this._timer = setTimeout(() => {
       this._onPendingTimeout();
-    }, this._partialTimeout);
+    }, 1000);
   }
 
   /**
@@ -240,122 +182,40 @@ class KeymapManager {
   private _clearPendingState(): void {
     this._clearTimer();
     this._exactData = null;
-    this._keystrokes.length = 0;
+    this._sequence.length = 0;
   }
 
   /**
-   * Set the pending exact match data.
-   */
-  private _setExactData(exact: ExBinding[], event: KeyboardEvent): void {
-    if (!this._exactData) {
-      this._exactData = { exact: exact, event: event };
-    } else {
-      this._exactData.exact = exact;
-      this._exactData.event = event;
-    }
-  }
-
-  /**
-   * Handle the partial timer timeout.
-   *
-   * This will reset the pending state and dispatch the exact matches.
+   * Handle the partial match timeout.
    */
   private _onPendingTimeout(): void {
+    var data = this._exactData;
     this._timer = 0;
-    var d = this._exactData;
-    this._clearPendingState();
-    if (d) dispatchBindings(d.exact, d.event);
+    this._exactData = null;
+    this._sequence.length = 0;
+    if (data) dispatchBindings(data.exact, data.event);
   }
 
   private _timer = 0;
-  private _partialTimeout = 1000;
-  private _keystrokes: string[] = [];
-  private _bindings: ExBinding[] = [];
+  private _sequence: string[] = [];
+  private _bindings: IExBinding[] = [];
   private _exactData: IExactData = null;
 }
 
 
 /**
- * An extended key bind object used by a keymap manager.
+ * An extended key binding object which holds extra data.
  */
-class ExBinding {
+interface IExBinding extends IKeyBinding {
   /**
-   * A monotonically increasing binding identifier.
-   *
-   * The binding id is used to break sorting ties.
+   * The specificity of the CSS selector.
    */
-  static idTick = 0;
+  specificity: number;
 
   /**
-   * A comparison function for extended bindings.
-   *
-   * This can be used to sort an array of bindings according to
-   * highest CSS specificity. Ties are broken according to the
-   * binding id, with newer bindings appearing first.
+   * A unique tie-breaking id number for the key binding.
    */
-  static compare(exA: ExBinding, exB: ExBinding): number {
-    if (exA._specificity === exB._specificity) {
-      return exB._id - exA._id;
-    }
-    return exB._specificity - exA._specificity;
-  }
-
-  /**
-   * Construct a new extended key binding.
-   *
-   * @param selector - The valid CSS selector for the binding.
-   *
-   * @param sequence - The normalized key binding sequence.
-   *
-   * @param handler - The handler function for the binding.
-   */
-  constructor(selector: string, sequence: string, handler: () => boolean) {
-    this._selector = selector;
-    this._sequence = sequence;
-    this._handler = handler;
-    this._specificity = calculateSpecificity(selector);
-  }
-
-  /**
-   * Create a public key binding object for this extended binding.
-   */
-  toBinding(): IKeyBinding {
-    return { sequence: this._sequence, handler: this._handler };
-  }
-
-  /**
-   * Test whether the binding is an exact match for a key sequence.
-   */
-  isExactMatch(sequence: string): boolean {
-    return this._sequence === sequence;
-  }
-
-  /**
-   * Test whether the binding is a partial match for a key sequence.
-   */
-  isPartialMatch(sequence: string): boolean {
-    return this._sequence.indexOf(sequence) === 0;
-  }
-
-  /**
-   * Test whether the binding selector matches an element.
-   */
-  isSelectorMatch(target: Element): boolean {
-    return matchesSelector(target, this._selector);
-  }
-
-  /**
-   * Invoke the handler for the binding and return its result.
-   */
-  invoke(): boolean {
-    return this._handler.call(void 0);
-  }
-
-  private _sequence: string;
-  private _selector: string;
-  private _specificity: number;
-  private _handler: () => boolean;
-  private _id = ExBinding.idTick++;
+  id: number;
 }
 
 
@@ -366,7 +226,7 @@ interface IExactData {
   /**
    * The exact match bindings.
    */
-  exact: ExBinding[];
+  exact: IExBinding[];
 
   /**
    * The keyboard event which triggered the exact match.
@@ -382,30 +242,108 @@ interface IMatchResult {
   /**
    * The bindings which exactly match the key sequence.
    */
-  exact: ExBinding[];
+  exact: IExBinding[];
 
   /**
    * The bindings which partially match the key sequence.
    */
-  partial: ExBinding[];
+  partial: IExBinding[];
 }
 
 
 /**
- * Filter the bindings for those which match the given sequence.
- *
- * The result contains both exact matches and partial matches.
+ * A monotonically increasing ex binding id number.
  */
-function findSequenceMatches(bindings: ExBinding[], sequence: string): IMatchResult {
-  var exact: ExBinding[] = [];
-  var partial: ExBinding[] = [];
-  var partialSequence = sequence + ' ';
+var bindingId = 0;
+
+
+/**
+ * Create an extended key binding from a user key binding.
+ *
+ * If the user key binding is invalid, a warning will be logged
+ * to the console and `null` will be returned.
+ */
+function createExBinding(binding: IKeyBinding): IExBinding {
+  if (!isSelectorValid(binding.selector)) {
+    console.warn(`invalid key binding selector: ${binding.selector}`);
+    return null;
+  }
+  if (binding.sequence.length === 0) {
+    console.warn('empty key sequence for key binding');
+    return null;
+  }
+  if (!binding.handler) {
+    console.warn('null handler for key binding');
+    return null;
+  }
+  try {
+    var sequence = binding.sequence.map(normalizeKeystroke);
+  } catch (e) {
+    console.warn(`invalid key binding sequence: ${binding.sequence}`);
+    return null;
+  }
+  return {
+    id: bindingId++,
+    sequence: sequence,
+    handler: binding.handler,
+    selector: binding.selector,
+    specificity: calculateSpecificity(binding.selector),
+  };
+}
+
+
+/**
+ * A comparison function for extended bindings.
+ *
+ * This can be used to sort an array of bindings according to the
+ * highest CSS specificity. Ties are broken using the binding id,
+ * with newer bindings appearing first.
+ */
+function exBindingCmp(first: IExBinding, second: IExBinding): number {
+  if (first.specificity === second.specificity) {
+    return second.id - first.id;
+  }
+  return second.specificity - first.specificity;
+}
+
+
+/**
+ * An enum which describes the possible sequence matches.
+ */
+const enum SequenceMatch { None, Exact, Partial };
+
+
+/**
+ * Test whether an ex binding matches a key sequence.
+ */
+function matchSequence(exb: IExBinding, sequence: string[]): SequenceMatch {
+  if (exb.sequence.length < sequence.length) {
+    return SequenceMatch.None;
+  }
+  for (var i = 0, n = sequence.length; i < n; ++i) {
+    if (exb.sequence[i] !== sequence[i]) {
+      return SequenceMatch.None;
+    }
+  }
+  if (exb.sequence.length > sequence.length) {
+    return SequenceMatch.Partial;
+  }
+  return SequenceMatch.Exact;
+}
+
+
+/**
+ * Find the extended bindings which match a key sequence.
+ */
+function findSequenceMatches(bindings: IExBinding[], sequence: string[]): IMatchResult {
+  var exact: IExBinding[] = [];
+  var partial: IExBinding[] = [];
   for (var i = 0, n = bindings.length; i < n; ++i) {
-    var exb = bindings[i];
-    if (exb.isExactMatch(sequence)) {
-      exact.push(exb);
-    } else if (exb.isPartialMatch(partialSequence)) {
-      partial.push(exb);
+    var match = matchSequence(bindings[i], sequence);
+    if (match === SequenceMatch.Exact) {
+      exact.push(bindings[i]);
+    } else if (match === SequenceMatch.Partial) {
+      partial.push(bindings[i]);
     }
   }
   return { exact: exact, partial: partial };
@@ -413,11 +351,13 @@ function findSequenceMatches(bindings: ExBinding[], sequence: string): IMatchRes
 
 
 /**
- * Filter the bindings for those with a matching selector.
+ * Find the extended bindings with a matching CSS selector.
+ *
+ * The resulting array will be sorted in binding sort order.
  */
-function findSelectorMatches(bindings: ExBinding[], target: Element): ExBinding[] {
-  var matches = bindings.filter(exb => exb.isSelectorMatch(target));
-  return matches.sort(ExBinding.compare);
+function findSelectorMatches(bindings: IExBinding[], target: Element): IExBinding[] {
+  var result = bindings.filter(exb => matchesSelector(target, exb.selector));
+  return result.sort(exBindingCmp);
 }
 
 
@@ -425,21 +365,25 @@ function findSelectorMatches(bindings: ExBinding[], target: Element): ExBinding[
  * Dispatch the key bindings for the given keyboard event.
  *
  * As the dispatcher walks up the DOM, the bindings will be filtered
- * for matching selectors, and invoked in specificity order. If the
- * handler for a binding returns `true`, dispatch will terminate and
- * the event propagation will be stopped.
+ * for matching selectors, and invoked in specificity order.
+ *
+ * // If the
+ * // handler for a binding returns `true`, dispatch will terminate and
+ * // the event propagation will be stopped.
  */
-function dispatchBindings(bindings: ExBinding[], event: KeyboardEvent): void {
+function dispatchBindings(bindings: IExBinding[], event: KeyboardEvent): void {
   var target = event.target as Element;
   var current = event.currentTarget as Element;
   while (target) {
     var matches = findSelectorMatches(bindings, target);
     for (var i = 0, n = matches.length; i < n; ++i) {
-      if (matches[i].invoke()) {
-        event.preventDefault();
-        event.stopPropagation();
-        return;
-      }
+      matches[i].handler.call(void 0);
+      return; // TODO
+      // if (matches[i].invoke()) {
+      //   event.preventDefault();
+      //   event.stopPropagation();
+      //   return;
+      // }
     }
     if (target === current) {
       return;
@@ -460,7 +404,7 @@ function matchesSelector(elem: Element, selector: string): boolean {
 /**
  * A cross-browser CSS selector matching prototype function.
  *
- * The function must be called with the element as `this`.
+ * This function must be called with an element as `this` context.
  */
 var protoMatchFunc: Function = (() => {
   var proto = Element.prototype as any;
