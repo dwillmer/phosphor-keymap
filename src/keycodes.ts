@@ -9,25 +9,42 @@
 
 
 /**
- * Create a normalize keystroke for a `'keydown'` event.
+ * Create a normalized keystroke for a `'keydown'` event.
  *
  * @param event - The event object for a `'keydown'` event.
  *
- * @returns The normalized keystroke string for the event.
+ * @returns The normalized keystroke string for the event, or an
+ *   empty string if the event does not represent a valid shortcut.
  *
  * #### Notes
- * This function uses the `keyCode` property of the event to determine
- * which key was pressed. The code will be incorrect for a `'keypress'`
- * event, so this function must only be used for a `'keydown'` event.
+ * TODO - conversion rules
  */
 export
 function keystrokeForKeydownEvent(event: KeyboardEvent): string {
-  var prefix = '';
-  if (event.ctrlKey) prefix += 'ctrl+';
-  if (event.altKey) prefix += 'alt+';
-  if (event.shiftKey) prefix += 'shift+';
-  if (event.metaKey) prefix += 'cmd+';
-  return prefix + keyForKeyCode(event.keyCode);
+  var key = keyForKeydownEvent(event);
+  if (!key) {
+    return '';
+  }
+  var modifiers = '';
+  if (IS_MAC && event.metaKey) {
+    modifiers += 'Cmd ';
+  }
+  if (key.length === 1) {
+    if (event.ctrlKey && (!IS_WIN || !event.altKey)) {
+      modifiers += 'Ctrl ';
+    }
+  } else {
+    if (event.ctrlKey) {
+      modifiers += 'Ctrl ';
+    }
+    if (event.altKey) {
+      modifiers += 'Alt ';
+    }
+    if (event.shiftKey) {
+      modifiers += 'Shift ';
+    }
+  }
+  return modifiers + key;
 }
 
 
@@ -38,106 +55,184 @@ function keystrokeForKeydownEvent(event: KeyboardEvent): string {
  *
  * @returns The lower cased and canonically ordered keystroke.
  *
- * @throws An error if the keystroke has an invalid format.
+ * @throws An error if the keystroke is invalid.
  *
  * #### Notes
- * The keystroke must adhere to the following format:
- *
- *   `[<modifier-1>+[<modifier-2>+[<modifier-n>+]]]<key>`
- *
- *   - Supported modifiers are `'ctrl'`, `'alt'`, `'shift'`, `'cmd'`.
- *   - The `'cmd'` modifier only works on OSX (browser limitation).
- *   - The modifiers may appear in any order.
- *   - The modifiers cannot appear in duplicate.
- *   - The primary key must be a valid key character.
- *   - The keystroke is case insensitive.
- *
- * If the key does not adhere to the format, an error will be thrown.
+ * TODO - conversion rules
  */
 export
 function normalizeKeystroke(keystroke: string): string {
   var key = '';
-  var sep = false;
   var alt = false;
   var cmd = false;
   var ctrl = false;
   var shift = false;
-  var tokens = keystroke.toLowerCase().split(/(\+)/).filter(s => !!s);
+  var tokens = keystroke.trim().split(/\s+/);
   for (var i = 0, n = tokens.length; i < n; ++i) {
     var token = tokens[i];
-    if (token === '+') {
-      if (sep || key || !(alt || cmd || ctrl || shift)) {
-        throwKeystrokeError(keystroke);
-      }
-      sep = true;
-    } else if (token === 'alt') {
+    if (token === 'Alt') {
       if (alt || key) {
         throwKeystrokeError(keystroke);
       }
       alt = true;
-      sep = false;
-    } else if (token === 'cmd') {
+    } else if (token === 'Cmd' || (token === 'Accel' && IS_MAC)) {
       if (cmd || key) {
         throwKeystrokeError(keystroke);
       }
       cmd = true;
-      sep = false;
-    } else if (token === 'ctrl') {
+    } else if (token === 'Ctrl' || (token === 'Accel' && !IS_MAC)) {
       if (ctrl || key) {
         throwKeystrokeError(keystroke);
       }
       ctrl = true;
-      sep = false;
-    } else if (token === 'shift') {
+    } else if (token === 'Shift') {
       if (shift || key) {
         throwKeystrokeError(keystroke);
       }
       shift = true;
-      sep = false;
-    } else {
-      if (key || token === 'meta' || !(token in KEY_CODE_MAP_INV)) {
+    } else if (token === 'Space') {
+      if (key) {
         throwKeystrokeError(keystroke);
       }
       key = token;
-      sep = false;
+    } else if (token.length === 1 || token in VALID_NAMED_KEYS) {
+      if (key) {
+        throwKeystrokeError(keystroke);
+      }
+      key = token;
     }
   }
-  if (!key) {
+  if (!key || (key.length === 1 && (alt || shift))) {
     throwKeystrokeError(keystroke);
   }
-  var prefix = '';
-  if (ctrl) prefix += 'ctrl+';
-  if (alt) prefix += 'alt+';
-  if (shift) prefix += 'shift+';
-  if (cmd) prefix += 'cmd+';
-  return prefix + key;
+  var modifiers = '';
+  if (cmd) {
+    modifiers += 'Cmd ';
+  }
+  if (ctrl) {
+    modifiers += 'Ctrl ';
+  }
+  if (alt) {
+    modifiers += 'Alt ';
+  }
+  if (shift) {
+    modifiers += 'Shift ';
+  }
+  return modifiers + key;
 }
 
 
 /**
- * A mapping of key code to key character.
+ * Throw an error with the give invalid keystroke.
  */
-var KEY_CODE_MAP: { [key: number]: string } = {
-  8: 'backspace',
-  9: 'tab',
-  13: 'enter',
-  16: 'shift',
-  17: 'ctrl',
-  18: 'alt',
-  19: 'pause',
-  20: 'capslock',
-  27: 'esc',
-  32: 'space',
-  33: 'pageup',
-  34: 'pagedown',
-  35: 'end',
-  36: 'home',
-  37: 'left',
-  38: 'up',
-  39: 'right',
-  40: 'down',
-  45: 'insert',
-  46: 'delete',
+function throwKeystrokeError(keystroke: string): void {
+  throw new Error(`invalid keystroke: ${keystroke}`);
+}
+
+
+/**
+ * Get the key character or named key for a keydown event.
+ *
+ * Returns an empty string if the key is not a valid shortcut key.
+ */
+function keyForKeydownEvent(event: KeyboardEvent): string {
+  var key = event.key;
+  if (key === void 0) {
+    key = keyForKeyCode(event.keyCode, event.shiftKey);
+  }
+  var result: string;
+  if (key.length === 1) {
+    result = key === ' ' ? 'Space' : key;
+  } else {
+    result = (key in VALID_NAMED_KEYS) ? key : '';
+  }
+  return result;
+}
+
+
+/**
+ * Get the key character or named key for a key code.
+ *
+ * Returns an empty string if the key is not a valid shortcut key.
+ *
+ * This assumes a US english keyboard layout.
+ *
+ * This is a fallback for browsers which don't implement `.key`.
+ */
+function keyForKeyCode(code: number, shifted: boolean): string {
+  return (shifted ? SHIFTED_KEY_CODES[code] : KEY_CODES[code]) || '';
+}
+
+
+/**
+ * A flag indicating whether the platform is Mac.
+ */
+var IS_MAC = !!navigator.platform.match(/Mac/i);
+
+
+/**
+ * A flag indicating whether the platform is Windows.
+ */
+var IS_WIN = !!navigator.platform.match(/Win/i);
+
+
+/**
+ * DOM 3 key names which are treated as valid shortcut keys.
+ */
+var VALID_NAMED_KEYS: { [key: string]: boolean } = {
+  ArrowDown: true,
+  ArrowLeft: true,
+  ArrowRight: true,
+  ArrowUp: true,
+  Backspace: true,
+  ContextMenu: true,
+  Delete: true,
+  End: true,
+  Enter: true,
+  Escape: true,
+  F1: true,
+  F2: true,
+  F3: true,
+  F4: true,
+  F5: true,
+  F6: true,
+  F7: true,
+  F8: true,
+  F9: true,
+  F10: true,
+  F11: true,
+  F12: true,
+  Home: true,
+  Insert: true,
+  PageDown: true,
+  PageUp: true,
+  Tab: true,
+}
+
+
+/**
+ * A mapping of key code to key character or named key.
+ *
+ * This mapping represents a US english keyboard layout.
+ *
+ * This is a fallback for browsers which don't implement `.key`.
+ */
+var KEY_CODES: { [key: number]: string } = {
+  8: 'Backspace',
+  9: 'Tab',
+  13: 'Enter',
+  27: 'Escape',
+  32: ' ',
+  33: 'PageUp',
+  34: 'PageDown',
+  35: 'End',
+  36: 'Home',
+  37: 'ArrowLeft',
+  38: 'ArrowUp',
+  39: 'ArrowRight',
+  40: 'ArrowDown',
+  45: 'Insert',
+  46: 'Delete',
   48: '0',
   49: '1',
   50: '2',
@@ -148,8 +243,6 @@ var KEY_CODE_MAP: { [key: number]: string } = {
   55: '7',
   56: '8',
   57: '9',
-  59: ';', // firefox
-  61: '=', // firefox
   65: 'a',
   66: 'b',
   67: 'c',
@@ -176,42 +269,34 @@ var KEY_CODE_MAP: { [key: number]: string } = {
   88: 'x',
   89: 'y',
   90: 'z',
-  91: 'meta',
-  92: 'meta',
-  93: 'contextmenu',
-  96: 'numpad0',
-  97: 'numpad1',
-  98: 'numpad2',
-  99: 'numpad3',
-  100: 'numpad4',
-  101: 'numpad5',
-  102: 'numpad6',
-  103: 'numpad7',
-  104: 'numpad8',
-  105: 'numpad9',
-  106: 'multiply',
-  107: 'add',
-  109: 'subtract',
-  110: 'decimal',
-  111: 'divide',
-  112: 'f1',
-  113: 'f2',
-  114: 'f3',
-  115: 'f4',
-  116: 'f5',
-  117: 'f6',
-  118: 'f7',
-  119: 'f8',
-  120: 'f9',
-  121: 'f10',
-  122: 'f11',
-  123: 'f12',
-  124: 'f13',
-  125: 'f14',
-  126: 'f15',
-  144: 'numlock',
-  145: 'scrolllock',
-  173: '-', // firefox
+  93: 'ContextMenu',
+  96: '0',  // numpad
+  97: '1',  // numpad
+  98: '2',  // numpad
+  99: '3',  // numpad
+  100: '4',  // numpad
+  101: '5',  // numpad
+  102: '6',  // numpad
+  103: '7',  // numpad
+  104: '8',  // numpad
+  105: '9',  // numpad
+  106: '*',  // numpad
+  107: '+',  // numpad
+  109: '-',  // numpad
+  110: '.',  // numpad
+  111: '/',  // numpad
+  112: 'F1',
+  113: 'F2',
+  114: 'F3',
+  115: 'F4',
+  116: 'F5',
+  117: 'F6',
+  118: 'F7',
+  119: 'F8',
+  120: 'F9',
+  121: 'F10',
+  122: 'F11',
+  123: 'F12',
   186: ';',
   187: '=',
   188: ',',
@@ -223,39 +308,105 @@ var KEY_CODE_MAP: { [key: number]: string } = {
   220: '\\',
   221: ']',
   222: '\'',
-  224: 'meta',  // firefox
 };
 
 
 /**
- * A mapping of key character to key code.
- */
-var KEY_CODE_MAP_INV: { [key: string]: number } = {};
-
-
-// Populate the key characters from the key codes map.
-(() => {
-  for (var key in KEY_CODE_MAP) {
-    var n = parseInt(key, 10);
-    var c = KEY_CODE_MAP[key];
-    KEY_CODE_MAP_INV[c] = n;
-  }
-})();
-
-
-/**
- * Throw an error for an invalid keystroke.
- */
-function throwKeystrokeError(keystroke: string): void {
-  throw new Error('Invalid Keystroke: ' + keystroke);
-}
-
-
-/**
- * Get the key character for a key code.
+ * A mapping of key code to shifted key character or named key.
  *
- * If the code is not valid, an empty string is returned.
+ * This mapping represents a US english keyboard layout.
+ *
+ * This is a fallback for browsers which don't implement `.key`.
  */
-function keyForKeyCode(code: number): string {
-  return KEY_CODE_MAP[code] || '';
-}
+var SHIFTED_KEY_CODES: { [key: number]: string } = {
+  8: 'Backspace',
+  9: 'Tab',
+  13: 'Enter',
+  27: 'Escape',
+  32: ' ',
+  33: 'PageUp',
+  34: 'PageDown',
+  35: 'End',
+  36: 'Home',
+  37: 'ArrowLeft',
+  38: 'ArrowUp',
+  39: 'ArrowRight',
+  40: 'ArrowDown',
+  45: 'Insert',
+  46: 'Delete',
+  48: ')',
+  49: '!',
+  50: '@',
+  51: '#',
+  52: '$',
+  53: '%',
+  54: '^',
+  55: '&',
+  56: '*',
+  57: '(',
+  65: 'A',
+  66: 'B',
+  67: 'C',
+  68: 'D',
+  69: 'E',
+  70: 'F',
+  71: 'G',
+  72: 'H',
+  73: 'I',
+  74: 'J',
+  75: 'K',
+  76: 'L',
+  77: 'M',
+  78: 'N',
+  79: 'O',
+  80: 'P',
+  81: 'Q',
+  82: 'R',
+  83: 'S',
+  84: 'T',
+  85: 'U',
+  86: 'V',
+  87: 'W',
+  88: 'X',
+  89: 'Y',
+  90: 'Z',
+  93: 'ContextMenu',
+  96: '0',  // numpad
+  97: '1',  // numpad
+  98: '2',  // numpad
+  99: '3',  // numpad
+  100: '4',  // numpad
+  101: '5',  // numpad
+  102: '6',  // numpad
+  103: '7',  // numpad
+  104: '8',  // numpad
+  105: '9',  // numpad
+  106: '*',  // numpad
+  107: '+',  // numpad
+  109: '-',  // numpad
+  110: '.',  // numpad
+  111: '/',  // numpad
+  112: 'F1',
+  113: 'F2',
+  114: 'F3',
+  115: 'F4',
+  116: 'F5',
+  117: 'F6',
+  118: 'F7',
+  119: 'F8',
+  120: 'F9',
+  121: 'F10',
+  122: 'F11',
+  123: 'F12',
+  186: ':',
+  187: '+',
+  188: '<',
+  189: '_',
+  190: '>',
+  191: '?',
+  192: '~',
+  219: '{',
+  220: '|',
+  221: '}',
+  222: '"',
+};
