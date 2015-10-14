@@ -37,7 +37,8 @@ interface IKeyBinding {
    * The key sequence for the key binding.
    *
    * Each keystroke in the sequence must adhere to the format:
-   * - TODO
+   *
+   *   TODO
    */
   sequence: string[];
 
@@ -143,8 +144,7 @@ class KeymapManager {
 
     // Restart the timer to get equal intervals between keystrokes.
     //
-    // TODO
-    // - we may want to replay events if an exact match fails.
+    // TODO - we may want to replay events if an exact match fails.
     event.preventDefault();
     event.stopPropagation();
     this._startTimer();
