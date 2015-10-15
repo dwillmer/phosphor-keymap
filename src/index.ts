@@ -7,5 +7,5 @@
 |----------------------------------------------------------------------------*/
 'use strict';
 
-export * from './keycodes';
+export * from './keyboard';
 export * from './manager';

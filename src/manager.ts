@@ -17,7 +17,7 @@ import {
 
 import {
   keystrokeForKeydownEvent, normalizeKeystroke
-} from './keycodes';
+} from './keyboard';
 
 
 /**

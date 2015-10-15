@@ -49,8 +49,8 @@
   "files": [
     "lib/index.js",
     "lib/index.d.ts",
-    "lib/keycodes.js",
-    "lib/keycodes.d.ts",
+    "lib/keyboard.js",
+    "lib/keyboard.d.ts",
     "lib/manager.js",
     "lib/manager.d.ts"
   ],
