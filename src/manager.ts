@@ -16,7 +16,7 @@ import {
 } from 'phosphor-disposable';
 
 import {
-  keystrokeForKeydownEvent, normalizeKeystroke
+  IKeyboardLayout, US_EN
 } from './keyboard';
 
 
@@ -56,8 +56,23 @@ export
 class KeymapManager {
   /**
    * Construct a new key map manager.
+   *
+   * @param layout - The keyboard layout to use with the manager.
+   *   The default keyboard layout is US-English.
    */
-  contstructor() { }
+  contstructor(layout: IKeyboardLayout = US_EN) {
+    this._layout = layout;
+  }
+
+  /**
+   * Get the keyboard layout used by the manager.
+   *
+   * #### Notes
+   * This is a read-only property.
+   */
+  get layout(): IKeyboardLayout {
+    return this._layout;
+  }
 
   /**
    * Add key bindings to the key map manager.
@@ -78,37 +93,28 @@ class KeymapManager {
    * Ambiguous key bindings are resolved with a timeout.
    */
   add(bindings: IKeyBinding[]): IDisposable {
-    // Iterate over the bindings and convert to extended bindings.
-    var exbArray: IExBinding[] = [];
-    for (var i = 0, n = bindings.length; i < n; ++i) {
-      var exb = createExBinding(bindings[i]);
-      if (exb) exbArray.push(exb);
-    }
-
-    // Register the bindings with the manager.
-    Array.prototype.push.apply(this._bindings, exbArray);
-
-    // Return a disposable which will remove the registered bindings.
+    var exbArray = bindings.map(createExBinding).filter(exb => !!exb);
+    this._bindings = this._bindings.concat(exbArray);
     return new DisposableDelegate(() => this._removeBindings(exbArray));
   }
 
   /**
-   * Process a `'keydown'` event and invoke the matching bindings.
+   * Process a `'keydown'` event and invoke a matching key binding.
    *
    * @param event - The event object for a `'keydown'` event.
    *
    * #### Notes
    * This should be called in response to a `'keydown'` event in order
-   * to invoke the handlers of the matching key bindings.
+   * to invoke the handler function of the best matching key binding.
    *
    * The manager **does not** install its own key event listeners. This
-   * allows user code full control over the nodes for which the keymap
-   * processes events.
+   * allows user code full control over the nodes for which the manager
+   * processes `'keydown'` events.
    */
   processKeydownEvent(event: KeyboardEvent): void {
-    // Get the canonical keystroke for the keydown event. Bail
-    // early if the event does not represent a valid keystroke.
-    var keystroke = keystrokeForKeydownEvent(event);
+    // Get the canonical keystroke for the event. An empty string
+    // indicates a keystroke which cannot be a valid key binding.
+    var keystroke = keystrokeForKeydownEvent(event, this._layout);
     if (!keystroke) {
       return;
     }
@@ -198,6 +204,7 @@ class KeymapManager {
   }
 
   private _timer = 0;
+  private _layout: IKeyboardLayout;
   private _sequence: string[] = [];
   private _bindings: IExBinding[] = [];
   private _exactData: IExactData = null;
@@ -250,8 +257,7 @@ interface IMatchResult {
 /**
  * Create an extended key binding from a user key binding.
  *
- * If the user key binding is invalid, a warning will be logged
- * to the console and `null` will be returned.
+ * Warns and returns `null` if the key binding is invalid.
  */
 function createExBinding(binding: IKeyBinding): IExBinding {
   if (!isSelectorValid(binding.selector)) {
@@ -278,6 +284,39 @@ function createExBinding(binding: IKeyBinding): IExBinding {
     selector: binding.selector,
     specificity: calculateSpecificity(binding.selector),
   };
+}
+
+
+/**
+ * A flag indicating whether the platform is Mac.
+ */
+var IS_MAC = !!navigator.platform.match(/Mac/i);
+
+
+/**
+ * Create a normalized keystroke for a `'keydown'` event.
+ *
+ * Returns an empty string if the keystroke is invalid.
+ */
+function keystrokeForKeydownEvent(event: KeyboardEvent, layout: IKeyboardLayout): string {
+  var keycap = layout.keycapForKeydownEvent(event);
+  if (!keycap) {
+    return '';
+  }
+  var mods = '';
+  if (event.metaKey && IS_MAC) {
+    mods += 'Cmd ';
+  }
+  if (event.ctrlKey) {
+    mods += 'Ctrl ';
+  }
+  if (event.altKey) {
+    mods += 'Alt ';
+  }
+  if (event.shiftKey) {
+    mods += 'Shift ';
+  }
+  return mods + keycap;
 }
 
 

@@ -9,6 +9,28 @@
 
 
 /**
+ *
+ */
+export
+interface IKeyboardLayout {
+  /**
+   *
+   */
+  name: string;
+
+  /**
+   *
+   */
+  isValidKeycap(keycap: string): boolean;
+
+  /**
+   *
+   */
+  keycapForKeydownEvent(event: KeyboardEvent): string;
+}
+
+
+/**
  * Create a normalized keystroke for a `'keydown'` event.
  *
  * @param event - The event object for a `'keydown'` event.
