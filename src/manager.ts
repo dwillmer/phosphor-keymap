@@ -16,7 +16,7 @@ import {
 } from 'phosphor-disposable';
 
 import {
-  IKeyboardLayout, US_EN
+  IKeyboardLayout, US_EN, keystrokeForKeydownEvent, normalizeKeystroke
 } from './keyboard';
 
 
@@ -26,21 +26,44 @@ import {
 export
 interface IKeyBinding {
   /**
-   * The CSS selector for the key binding.
-   *
-   * This selector must match a node on the propagation path of the
-   * keyboard event in order for the binding handler to be invoked.
-   */
-  selector: string;
-
-  /**
    * The key sequence for the key binding.
    *
-   * Each keystroke in the sequence must adhere to the format:
+   * A key sequence is represented as an array of keystrokes, where
+   * each keystroke is a combination of modifiers (optional) and a
+   * primary key (required).
    *
-   *   TODO
+   * Most key sequences will be an array of length `1`, which represent
+   * a typical keyboard shortcut. Sequences of longer length are known
+   * as "chords" and can be useful for modal input (ala Vim).
+   *
+   * Each keystroke in a sequence must adhere to the format:
+   *
+   *   `[<modifier 1> [<modifier 2> [<modifier N]]] <primary key>`
+   *
+   * The supported modifiers are: `Accel`, `Alt`, `Cmd`, `Ctrl`, and
+   * `Shift`. The `Accel` modifier is translated to `Cmd` on Mac and
+   * `Ctrl` on all other platforms.
+   *
+   * Each keystroke must conform to the following:
+   *   - Modifiers and the primary key are case senstive.
+   *   - The primary key must be a valid key for the layout.
+   *   - Whitespace is used to separate modifiers and primary key.
+   *   - Modifiers may appear in any order before the primary key.
+   *   - Modifiers cannot appear in duplicate.
+   *
+   * If a keystroke is nonconforming, the key binding will be ignored.
    */
   sequence: string[];
+
+  /**
+   * The CSS selector for the key binding.
+   *
+   * The selector must match a node on the propagation path of the
+   * keyboard event in order for the binding handler to be invoked.
+   *
+   * If the selector is invalid, the key binding will be ignored.
+   */
+  selector: string;
 
   /**
    * The handler function to invoke when the key binding is matched.
@@ -58,9 +81,9 @@ class KeymapManager {
    * Construct a new key map manager.
    *
    * @param layout - The keyboard layout to use with the manager.
-   *   The default keyboard layout is US-English.
+   *   The default layout is US-English.
    */
-  contstructor(layout: IKeyboardLayout = US_EN) {
+  constructor(layout: IKeyboardLayout = US_EN) {
     this._layout = layout;
   }
 
@@ -284,39 +307,6 @@ function createExBinding(binding: IKeyBinding): IExBinding {
     selector: binding.selector,
     specificity: calculateSpecificity(binding.selector),
   };
-}
-
-
-/**
- * A flag indicating whether the platform is Mac.
- */
-var IS_MAC = !!navigator.platform.match(/Mac/i);
-
-
-/**
- * Create a normalized keystroke for a `'keydown'` event.
- *
- * Returns an empty string if the keystroke is invalid.
- */
-function keystrokeForKeydownEvent(event: KeyboardEvent, layout: IKeyboardLayout): string {
-  var keycap = layout.keycapForKeydownEvent(event);
-  if (!keycap) {
-    return '';
-  }
-  var mods = '';
-  if (event.metaKey && IS_MAC) {
-    mods += 'Cmd ';
-  }
-  if (event.ctrlKey) {
-    mods += 'Ctrl ';
-  }
-  if (event.altKey) {
-    mods += 'Alt ';
-  }
-  if (event.shiftKey) {
-    mods += 'Shift ';
-  }
-  return mods + keycap;
 }
 
 
