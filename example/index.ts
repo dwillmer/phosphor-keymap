@@ -15,22 +15,35 @@ import {
 /**
  * A list of keyboard shortcuts for the example.
  */
-// var SHORTCUTS = [
-//   'a',
-//   'b',
-//   'c',
-//   'd',
-//   'd d',
-//   'ctrl+=',
-//   'ctrl+-',
-//   'ctrl+a',
-//   'shift+b',
-//   'ctrl+[',
-//   'ctrl+alt+0',
-//   'ctrl+k ctrl+;',
-//   'shift+F7 shift+F8',
-//   'alt+n alt+m shift+alt+o',
-// ];
+var SHORTCUTS = [
+  ['A'],
+  ['B'],
+  ['D'],
+  ['Escape'],
+  ['D', 'D'],
+  ['Accel ='],
+  ['Accel -'],
+  ['Accel ['],
+  ['Accel ]'],
+  ['Accel A'],
+  ['Accel C'],
+  ['Accel V'],
+  ['Shift B'],
+  ['Shift Enter'],
+  ['Ctrl Space'],
+  ['Ctrl Alt 0'],
+  ['Ctrl K', 'Ctrl ;'],
+  ['Shift F7', 'Shift F8'],
+  ['Alt N', 'Alt M', 'Shift Alt P'],
+];
+
+
+/**
+ * Convert a key sequence into a display string.
+ */
+function makeStr(sequence: string[]): string {
+  return sequence.map(s => s.replace(/\s/g, '-')).join(' ');
+}
 
 
 /**
@@ -38,29 +51,33 @@ import {
  *
  * This handler always returns true to stop event propagation.
  */
-// function logHandler(sequence: string): boolean {
-//   var span = document.getElementById('log-span');
-//   span.textContent = sequence;
-//   return true;
-// }
+function logHandler(sequence: string[]): boolean {
+  var span = document.getElementById('log-span');
+  span.textContent = makeStr(sequence);
+  return true;
+}
 
 
 /**
  * Create a log key binding for the given key sequence.
  */
-// function makeLogBinding(sequence: string): IKeyBinding {
-//   return { sequence: sequence, handler: logHandler.bind(void 0, sequence) };
-// }
+function makeLogBinding(sequence: string[]): IKeyBinding {
+  return {
+    selector: '*',
+    sequence: sequence,
+    handler: logHandler.bind(void 0, sequence),
+  };
+}
 
 
 /**
  * Create an unordered list from an array of strings.
  */
-// function createList(data: string[]): HTMLElement {
-//   var ul = document.createElement('ul');
-//   ul.innerHTML = data.map(text => `<li>${text}</li>`).join('');
-//   return ul;
-// }
+function createList(data: string[][]): HTMLElement {
+  var ul = document.createElement('ul');
+  ul.innerHTML = data.map(seq => `<li>${makeStr(seq)}</li>`).join('');
+  return ul;
+}
 
 
 /**
@@ -68,26 +85,20 @@ import {
  */
 function main(): void {
   // Create the key bindings for the shortcuts.
-  // var bindings = SHORTCUTS.map(makeLogBinding);
+  var bindings = SHORTCUTS.map(makeLogBinding);
 
   // Initialize the keymap manager with the bindings.
-  // These bindings are applied globally ('*').
-  // var keymap = new KeymapManager();
-  // keymap.add('*', bindings);
+  var keymap = new KeymapManager();
+  keymap.add(bindings);
 
   // Setup the keydown listener for the document.
   document.addEventListener('keydown', event => {
-    //keymap.processKeydownEvent(event);
-    var span = document.getElementById('log-span');
-    span.textContent = keystrokeForKeydownEvent(event);
-    event.preventDefault();
-    event.stopPropagation();
-    console.log('is composing:', (<any>event).isComposing);
+    keymap.processKeydownEvent(event);
   });
 
   // Create and add the list of shortcuts to the DOM.
-  // var host = document.getElementById('list-host');
-  // host.appendChild(createList(SHORTCUTS));
+  var host = document.getElementById('list-host');
+  host.appendChild(createList(SHORTCUTS));
 }
 
 
