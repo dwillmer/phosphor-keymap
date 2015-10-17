@@ -118,7 +118,9 @@ class KeymapManager {
    * Ambiguous key bindings are resolved with a timeout.
    */
   add(bindings: IKeyBinding[]): IDisposable {
-    var exbArray = bindings.map(createExBinding).filter(exb => !!exb);
+    var exbArray = bindings.map(binding => {
+      return createExBinding(binding, this._layout);
+    }).filter(exBinding => !!exBinding);
     this._bindings = this._bindings.concat(exbArray);
     return new DisposableDelegate(() => this._removeBindings(exbArray));
   }
@@ -286,7 +288,7 @@ interface IMatchResult {
  *
  * Warns and returns `null` if the key binding is invalid.
  */
-function createExBinding(binding: IKeyBinding): IExBinding {
+function createExBinding(binding: IKeyBinding, layout: IKeyboardLayout): IExBinding {
   if (!isSelectorValid(binding.selector)) {
     console.warn(`invalid key binding selector: ${binding.selector}`);
     return null;
@@ -300,8 +302,9 @@ function createExBinding(binding: IKeyBinding): IExBinding {
     return null;
   }
   try {
-    var sequence = binding.sequence.map(normalizeKeystroke);
+    var sequence = binding.sequence.map(ks => normalizeKeystroke(ks, layout));
   } catch (e) {
+    console.warn(e.message);
     console.warn(`invalid key binding sequence: ${binding.sequence}`);
     return null;
   }

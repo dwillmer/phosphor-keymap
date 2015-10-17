@@ -209,7 +209,7 @@ var IS_MAC = !!navigator.platform.match(/Mac/i);
 
 // temp
 export
-const EN_US: IKeyboardLayout;
+const EN_US: IKeyboardLayout = void 0;
 
 
 /**
