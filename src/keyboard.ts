@@ -14,7 +14,7 @@
 export
 interface IKeyboardLayout {
   /**
-   * The human-readable read-only name of the layout.
+   * The human readable read-only name of the layout.
    *
    * This value is used primarily for display and debugging purposes.
    */
@@ -34,10 +34,9 @@ interface IKeyboardLayout {
   /**
    * Test whether the given keycap is a valid value for the layout.
    *
-   * @param keycap - The user-provided keycap to test for validity.
+   * @param keycap - The user provided keycap to test for validity.
    *
-   * @returns `true` if the keycap is supported by the layout, `false`
-   *   otherwise.
+   * @returns `true` if the keycap is valid, `false` otherwise.
    */
   isValidKeycap(keycap: string): boolean;
 
@@ -60,8 +59,8 @@ interface IKeyboardLayout {
  *
  * @param layout - The keyboard layout for computing the keycap.
  *
- * @returns A normalized keystroke, or an empty string if the
- *   event does not represent a valid shortcut keystroke.
+ * @returns A normalized keystroke, or an empty string if the event
+ *   does not represent a valid shortcut keystroke.
  */
 export
 function keystrokeForKeydownEvent(event: KeyboardEvent, layout: IKeyboardLayout): string {
@@ -112,6 +111,7 @@ function keystrokeForKeydownEvent(event: KeyboardEvent, layout: IKeyboardLayout)
  *   - Whitespace is used to separate modifiers and primary key.
  *   - Modifiers may appear in any order before the primary key.
  *   - Modifiers cannot appear in duplicate.
+ *   - The `Cmd` modifier is only valid on Mac.
  *
  * If a keystroke is nonconforming, an error will be thrown.
  */
@@ -130,7 +130,7 @@ function normalizeKeystroke(keystroke: string, layout: IKeyboardLayout): string 
     }
     if (token === 'Alt') {
       if (alt) {
-        throwKeystrokeError(keystroke, '`Alt` specified in duplicate');
+        throwKeystrokeError(keystroke, '`Alt` appears in duplicate');
       }
       if (keycap) {
         throwKeystrokeError(keystroke, '`Alt` follows primary key');
@@ -138,7 +138,7 @@ function normalizeKeystroke(keystroke: string, layout: IKeyboardLayout): string 
       alt = true;
     } else if (token === 'Cmd') {
       if (cmd) {
-        throwKeystrokeError(keystroke, '`Cmd` specified in duplicate');
+        throwKeystrokeError(keystroke, '`Cmd` appears in duplicate');
       }
       if (keycap) {
         throwKeystrokeError(keystroke, '`Cmd` follows primary key');
@@ -149,7 +149,7 @@ function normalizeKeystroke(keystroke: string, layout: IKeyboardLayout): string 
       cmd = true;
     } else if (token === 'Ctrl') {
       if (ctrl) {
-        throwKeystrokeError(keystroke, '`Ctrl` specified in duplicate');
+        throwKeystrokeError(keystroke, '`Ctrl` appears in duplicate');
       }
       if (keycap) {
         throwKeystrokeError(keystroke, '`Ctrl` follows primary key');
@@ -157,7 +157,7 @@ function normalizeKeystroke(keystroke: string, layout: IKeyboardLayout): string 
       ctrl = true;
     } else if (token === 'Shift') {
       if (shift) {
-        throwKeystrokeError(keystroke, '`Shift` specified in duplicate');
+        throwKeystrokeError(keystroke, '`Shift` appears in duplicate');
       }
       if (keycap) {
         throwKeystrokeError(keystroke, '`Shift` follows primary key');
@@ -165,15 +165,15 @@ function normalizeKeystroke(keystroke: string, layout: IKeyboardLayout): string 
       shift = true;
     } else {
       if (keycap) {
-        throwKeystrokeError(keystroke, 'primary key specified in duplicate');
+        throwKeystrokeError(keystroke, 'primary key appears in duplicate');
       }
       if (!layout.isValidKeycap(token)) {
-        throwKeystrokeError(keystroke, 'invalid primary key');
+        throwKeystrokeError(keystroke, 'primary key invalid for layout');
       }
       keycap = token;
     }
   }
-  if (keycap) {
+  if (!keycap) {
     throwKeystrokeError(keystroke, 'primary key not specified');
   }
   var mods = '';
@@ -208,7 +208,8 @@ var IS_MAC = !!navigator.platform.match(/Mac/i);
 
 
 // temp
-export var US_EN: any;
+export
+const EN_US: IKeyboardLayout;
 
 
 /**

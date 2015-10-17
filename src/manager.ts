@@ -16,7 +16,7 @@ import {
 } from 'phosphor-disposable';
 
 import {
-  IKeyboardLayout, US_EN, keystrokeForKeydownEvent, normalizeKeystroke
+  IKeyboardLayout, EN_US, keystrokeForKeydownEvent, normalizeKeystroke
 } from './keyboard';
 
 
@@ -36,7 +36,7 @@ interface IKeyBinding {
    * a typical keyboard shortcut. Sequences of longer length are known
    * as "chords" and can be useful for modal input (ala Vim).
    *
-   * Each keystroke in a sequence must adhere to the format:
+   * Each keystroke in the sequence must adhere to the format:
    *
    *   `[<modifier 1> [<modifier 2> [<modifier N]]] <primary key>`
    *
@@ -50,6 +50,7 @@ interface IKeyBinding {
    *   - Whitespace is used to separate modifiers and primary key.
    *   - Modifiers may appear in any order before the primary key.
    *   - Modifiers cannot appear in duplicate.
+   *   - The `Cmd` modifier is only valid on Mac.
    *
    * If a keystroke is nonconforming, the key binding will be ignored.
    */
@@ -81,9 +82,9 @@ class KeymapManager {
    * Construct a new key map manager.
    *
    * @param layout - The keyboard layout to use with the manager.
-   *   The default layout is US-English.
+   *   The default layout is US English.
    */
-  constructor(layout: IKeyboardLayout = US_EN) {
+  constructor(layout: IKeyboardLayout = EN_US) {
     this._layout = layout;
   }
 
@@ -111,7 +112,8 @@ class KeymapManager {
    * If multiple key bindings are registered for the same sequence,
    * the binding with the highest CSS specificity is executed first.
    * Ties in specificity are broken based on the order in which the
-   * key bindings are added to the manager.
+   * key bindings are added to the manager, with newer bindinding
+   * taking precedence.
    *
    * Ambiguous key bindings are resolved with a timeout.
    */
@@ -136,7 +138,7 @@ class KeymapManager {
    */
   processKeydownEvent(event: KeyboardEvent): void {
     // Get the canonical keystroke for the event. An empty string
-    // indicates a keystroke which cannot be a valid key binding.
+    // indicates a keystroke which cannot be a valid key shortcut.
     var keystroke = keystrokeForKeydownEvent(event, this._layout);
     if (!keystroke) {
       return;
@@ -148,7 +150,7 @@ class KeymapManager {
     // Find the exact and partial matches for the key sequence.
     var matches = findSequenceMatches(this._bindings, this._sequence);
 
-    // If there are no exact match and not partial matches, clear
+    // If there are no exact matches and no partial matches, clear
     // all pending state so the next key press starts from default.
     if (matches.exact.length === 0 && matches.partial.length === 0) {
       this._clearPendingState();
@@ -157,21 +159,23 @@ class KeymapManager {
 
     // If there are exact matches but no partial matches, the exact
     // matches can be dispatched immediately. The pending state is
-    // reset so the next key press starts from default.
+    // cleared so the next key press starts from default.
     if (matches.partial.length === 0) {
       this._clearPendingState();
       dispatchBindings(matches.exact, event);
       return;
     }
 
-    // If there are exact matches and partial matches, the exact
-    // matches are stored so they can be dispatched if the timer
+    // If there are both exact matches and partial matches, the exact
+    // matches are stored so that they can be dispatched if the timer
     // expires before a more specific match is found.
     if (matches.exact.length > 0) {
       this._exactData = { exact: matches.exact, event: event };
     }
 
-    // Restart the timer to get equal intervals between keystrokes.
+    // (Re)start the timer to trigger the most recent exact match in
+    // the event the pending partial match fails to result in a final
+    // unambiguous exact match.
     //
     // TODO - we may want to replay events if an exact match fails.
     event.preventDefault();
@@ -180,7 +184,7 @@ class KeymapManager {
   }
 
   /**
-   * Remove an array of ex bindings from the key map.
+   * Remove an array of extended bindings from the key map.
    */
   private _removeBindings(array: IExBinding[]): void {
     this._bindings = this._bindings.filter(exb => array.indexOf(exb) === -1);
