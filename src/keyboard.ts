@@ -283,6 +283,9 @@ class KeycodeLayout implements IKeyboardLayout {
  *   - IE
  *
  * - OSX
+ *   - Chrome
+ *   - Firefox
+ *   - Safari
  *
  * - Linux
  *
