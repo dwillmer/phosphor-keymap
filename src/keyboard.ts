@@ -274,6 +274,19 @@ class KeycodeLayout implements IKeyboardLayout {
 
 /**
  * A keycode-based keyboard layout for US English keyboards.
+ *
+ * This layout is valid for the following OS/Browser combinations.
+ *
+ * - Windows
+ *   - Chrome
+ *   - Firefox
+ *   - IE
+ *
+ * - OSX
+ *
+ * - Linux
+ *
+ * Other combinations may also work, but are untested.
  */
 export
 const EN_US: IKeyboardLayout = new KeycodeLayout('en-us', {
@@ -303,6 +316,8 @@ const EN_US: IKeyboardLayout = new KeycodeLayout('en-us', {
   55: '7',
   56: '8',
   57: '9',
+  59: ';',  // firefox
+  61: '=',  // firefox
   65: 'A',
   66: 'B',
   67: 'C',
@@ -357,6 +372,7 @@ const EN_US: IKeyboardLayout = new KeycodeLayout('en-us', {
   121: 'F10',
   122: 'F11',
   123: 'F12',
+  173: '-',  // firefox
   186: ';',
   187: '=',
   188: ',',
