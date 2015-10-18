@@ -288,6 +288,8 @@ class KeycodeLayout implements IKeyboardLayout {
  *   - Safari
  *
  * - Linux
+ *   - Chrome
+ *   - Firefox
  *
  * Other combinations may also work, but are untested.
  */
@@ -376,10 +378,10 @@ const EN_US: IKeyboardLayout = new KeycodeLayout('en-us', {
   122: 'F11',
   123: 'F12',
   173: '-',  // firefox
-  186: ';',
-  187: '=',
+  186: ';',  // non-firefox
+  187: '=',  // non-firefox
   188: ',',
-  189: '-',
+  189: '-',  // non-firefox
   190: '.',
   191: '/',
   192: '`',
