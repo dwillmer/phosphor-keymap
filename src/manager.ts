@@ -112,7 +112,7 @@ class KeymapManager {
    * If multiple key bindings are registered for the same sequence,
    * the binding with the highest CSS specificity is executed first.
    * Ties in specificity are broken based on the order in which the
-   * key bindings are added to the manager, with newer bindinding
+   * key bindings are added to the manager, with newer binding
    * taking precedence.
    *
    * Ambiguous key bindings are resolved with a timeout.
