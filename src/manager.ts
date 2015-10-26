@@ -38,7 +38,7 @@ interface IKeyBinding {
    *
    * Each keystroke in the sequence must adhere to the format:
    *
-   *   `[<modifier 1> [<modifier 2> [<modifier N]]] <primary key>`
+   *   `[<modifier 1> [<modifier 2> [<modifier N>]]] <primary key>`
    *
    * The supported modifiers are: `Accel`, `Alt`, `Cmd`, `Ctrl`, and
    * `Shift`. The `Accel` modifier is translated to `Cmd` on Mac and
