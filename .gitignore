@@ -3,7 +3,7 @@
 .DS_Store
 docs/api
 lib
-example/*.js
+example/bundle.js
 node_modules
 test/build
 test/coverage
