@@ -60,16 +60,21 @@ interface IKeyBinding {
    * The CSS selector for the key binding.
    *
    * The selector must match a node on the propagation path of the
-   * keyboard event in order for the binding handler to be invoked.
+   * keyboard event in order for the binding command to be invoked.
    *
    * If the selector is invalid, the key binding will be ignored.
    */
   selector: string;
 
   /**
-   * The handler function to invoke when the key binding is matched.
+   * The command to invoke when the key binding is matched.
    */
-  handler: () => void;
+  commandId: string;
+
+  /**
+   * The arguments to be passed to the command when invoked.
+   */
+  commandArgs?: any;
 }
 
 
@@ -84,8 +89,9 @@ class KeymapManager {
    * @param layout - The keyboard layout to use with the manager.
    *   The default layout is US English.
    */
-  constructor(layout: IKeyboardLayout = EN_US) {
+  constructor(layout: IKeyboardLayout = EN_US, commands: any) {
     this._layout = layout;
+    this._commandRegistry = commands;
   }
 
   /**
@@ -132,7 +138,7 @@ class KeymapManager {
    *
    * #### Notes
    * This should be called in response to a `'keydown'` event in order
-   * to invoke the handler function of the best matching key binding.
+   * to invoke the command of the best matching key binding.
    *
    * The manager **does not** install its own key event listeners. This
    * allows user code full control over the nodes for which the manager
@@ -164,7 +170,7 @@ class KeymapManager {
     // cleared so the next key press starts from default.
     if (matches.partial.length === 0) {
       this._clearPendingState();
-      dispatchBindings(matches.exact, event);
+      dispatchBindings(matches.exact, event, this._commandRegistry);
       return;
     }
 
@@ -229,7 +235,7 @@ class KeymapManager {
     this._timer = 0;
     this._exactData = null;
     this._sequence.length = 0;
-    if (data) dispatchBindings(data.exact, data.event);
+    if (data) dispatchBindings(data.exact, data.event, this._commandRegistry);
   }
 
   private _timer = 0;
@@ -237,6 +243,7 @@ class KeymapManager {
   private _sequence: string[] = [];
   private _bindings: IExBinding[] = [];
   private _exactData: IExactData = null;
+  private _commandRegistry: any = null;
 }
 
 
@@ -297,8 +304,8 @@ function createExBinding(binding: IKeyBinding, layout: IKeyboardLayout): IExBind
     console.warn('empty key sequence for key binding');
     return null;
   }
-  if (!binding.handler) {
-    console.warn('null handler for key binding');
+  if (!binding.commandId) {
+    console.warn('null commandId for key binding');
     return null;
   }
   try {
@@ -310,7 +317,7 @@ function createExBinding(binding: IKeyBinding, layout: IKeyboardLayout): IExBind
   }
   return {
     sequence: sequence,
-    handler: binding.handler,
+    commandId: binding.commandId,
     selector: binding.selector,
     specificity: calculateSpecificity(binding.selector),
   };
@@ -388,17 +395,17 @@ function findBestMatch(bindings: IExBinding[], target: Element): IExBinding {
  * Dispatch the key bindings for the given keyboard event.
  *
  * As the dispatcher walks up the DOM, the bindings will be filtered
- * for the best matching keybinding. If a match is found, the handler
+ * for the best matching keybinding. If a match is found, the command
  * is invoked and event propagation is stopped.
  */
-function dispatchBindings(bindings: IExBinding[], event: KeyboardEvent): void {
+function dispatchBindings(bindings: IExBinding[], event: KeyboardEvent, commands: any): void {
   var target = event.target as Element;
   while (target) {
     var match = findBestMatch(bindings, target);
     if (match) {
       event.preventDefault();
       event.stopPropagation();
-      match.handler.call(void 0);
+      commands.safeExecute(match.commandId, match.commandArgs);
       return;
     }
     if (target === event.currentTarget) {

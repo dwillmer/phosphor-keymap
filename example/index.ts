@@ -8,6 +8,10 @@
 'use-strict';
 
 import {
+  DelegateCommand
+} from 'phosphor-command';
+
+import {
   IKeyBinding, KeymapManager, keystrokeForKeydownEvent
 } from '../lib/index';
 
@@ -65,7 +69,8 @@ function makeLogBinding(sequence: string[]): IKeyBinding {
   return {
     selector: '*',
     sequence: sequence,
-    handler: logHandler.bind(void 0, sequence),
+    commandId: "example:logHandler",
+    commandArgs: sequence
   };
 }
 
@@ -84,6 +89,11 @@ function createList(data: string[][]): HTMLElement {
  * The main application entry point.
  */
 function main(): void {
+
+  let command = new DelegateCommand(args => {
+    logHandler.bind(void 0, args),
+  });
+
   // Create the key bindings for the shortcuts.
   var bindings = SHORTCUTS.map(makeLogBinding);
 
