@@ -89,7 +89,7 @@ class KeymapManager {
    * @param layout - The keyboard layout to use with the manager.
    *   The default layout is US English.
    */
-  constructor(layout: IKeyboardLayout = EN_US, commands: any) {
+  constructor(commands: any, layout: IKeyboardLayout = EN_US) {
     this._layout = layout;
     this._commandRegistry = commands;
   }
@@ -129,6 +129,37 @@ class KeymapManager {
     }).filter(exBinding => !!exBinding);
     this._bindings = this._bindings.concat(exbArray);
     return new DisposableDelegate(() => this._removeBindings(exbArray));
+  }
+
+  /**
+   * Test whether a command with a specific id is registered.
+   *
+   * @param id - The id of the command of interest.
+   *
+   * @returns `true` if the command is registered, `false` otherwise.
+   */
+  has(id: string): boolean {
+    for (let i = 0; i < this._bindings.length; ++i) {
+      if (this._bindings[i].commandId === id) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Lookup a command with a specific id.
+   *
+   * @param id - The id of the command of interest.
+   *
+   * @returns The keybinding for the specified id, or `undefined`.
+   */
+  get(id: string): string {
+    for (let i = 0; i < this._bindings.length; ++i) {
+      if (this._bindings[i].commandId === id) {
+        return this._bindings[i].sequence[0]; // TODO
+      }
+    }
   }
 
   /**
