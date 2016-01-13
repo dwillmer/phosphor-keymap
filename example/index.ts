@@ -90,8 +90,8 @@ function createList(data: string[][]): HTMLElement {
  */
 function main(): void {
 
-  let command = new DelegateCommand(args => {
-    logHandler.bind(void 0, args),
+  let command = new DelegateCommand((args: any) => {
+    logHandler.bind(void 0, args)
   });
 
   // Create the key bindings for the shortcuts.
