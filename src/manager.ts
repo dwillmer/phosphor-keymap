@@ -135,7 +135,7 @@ class KeymapManager {
   }
 
   /**
-   * Test whether a command with a specific id is registered.
+   * Test whether a command is registered.
    *
    * @param command - The command of interest.
    *
@@ -151,7 +151,7 @@ class KeymapManager {
   }
 
   /**
-   * Lookup a command with a specific id.
+   * Lookup a command.
    *
    * @param command - The command of interest.
    *
@@ -396,10 +396,8 @@ function findSequenceMatches(bindings: IExBinding[], sequence: string[]): IMatch
   for (var i = 0, n = bindings.length; i < n; ++i) {
     var match = matchSequence(bindings[i], sequence);
     if (match === SequenceMatch.Exact) {
-      console.log("Exact match: " + bindings[i].toString());
       exact.push(bindings[i]);
     } else if (match === SequenceMatch.Partial) {
-      console.log("Partial match: " + bindings[i].toString());
       partial.push(bindings[i]);
     }
   }
@@ -441,7 +439,6 @@ function dispatchBindings(bindings: IExBinding[], event: KeyboardEvent): void {
     if (match) {
       event.preventDefault();
       event.stopPropagation();
-      console.log('EXECUTING');
       match.command.execute(match.commandArgs);
       return;
     }
