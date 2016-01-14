@@ -12,6 +12,10 @@ import {
 } from 'clear-cut';
 
 import {
+  ICommand
+} from 'phosphor-command';
+
+import {
   DisposableDelegate, IDisposable
 } from 'phosphor-disposable';
 
@@ -69,7 +73,7 @@ interface IKeyBinding {
   /**
    * The command to invoke when the key binding is matched.
    */
-  commandId: string;
+  command: ICommand;
 
   /**
    * The arguments to be passed to the command when invoked.
@@ -89,9 +93,8 @@ class KeymapManager {
    * @param layout - The keyboard layout to use with the manager.
    *   The default layout is US English.
    */
-  constructor(commands: any, layout: IKeyboardLayout = EN_US) {
+  constructor(layout: IKeyboardLayout = EN_US) {
     this._layout = layout;
-    this._commandRegistry = commands;
   }
 
   /**
@@ -134,13 +137,13 @@ class KeymapManager {
   /**
    * Test whether a command with a specific id is registered.
    *
-   * @param id - The id of the command of interest.
+   * @param command - The command of interest.
    *
    * @returns `true` if the command is registered, `false` otherwise.
    */
-  has(id: string): boolean {
+  has(command: ICommand): boolean {
     for (let i = 0; i < this._bindings.length; ++i) {
-      if (this._bindings[i].commandId === id) {
+      if (this._bindings[i].command === command) {
         return true;
       }
     }
@@ -150,14 +153,14 @@ class KeymapManager {
   /**
    * Lookup a command with a specific id.
    *
-   * @param id - The id of the command of interest.
+   * @param command - The command of interest.
    *
-   * @returns The keybinding for the specified id, or `undefined`.
+   * @returns The string sequence for the command.
    */
-  get(id: string): string {
+  get(command: ICommand): string[] {
     for (let i = 0; i < this._bindings.length; ++i) {
-      if (this._bindings[i].commandId === id) {
-        return this._bindings[i].sequence[0]; // TODO
+      if (this._bindings[i].command === command) {
+        return this._bindings[i].sequence;
       }
     }
   }
@@ -201,7 +204,7 @@ class KeymapManager {
     // cleared so the next key press starts from default.
     if (matches.partial.length === 0) {
       this._clearPendingState();
-      dispatchBindings(matches.exact, event, this._commandRegistry);
+      dispatchBindings(matches.exact, event);
       return;
     }
 
@@ -266,7 +269,7 @@ class KeymapManager {
     this._timer = 0;
     this._exactData = null;
     this._sequence.length = 0;
-    if (data) dispatchBindings(data.exact, data.event, this._commandRegistry);
+    if (data) dispatchBindings(data.exact, data.event);
   }
 
   private _timer = 0;
@@ -274,7 +277,6 @@ class KeymapManager {
   private _sequence: string[] = [];
   private _bindings: IExBinding[] = [];
   private _exactData: IExactData = null;
-  private _commandRegistry: any = null;
 }
 
 
@@ -335,8 +337,8 @@ function createExBinding(binding: IKeyBinding, layout: IKeyboardLayout): IExBind
     console.warn('empty key sequence for key binding');
     return null;
   }
-  if (!binding.commandId) {
-    console.warn('null commandId for key binding');
+  if (!binding.command) {
+    console.warn('null command for key binding');
     return null;
   }
   try {
@@ -348,7 +350,8 @@ function createExBinding(binding: IKeyBinding, layout: IKeyboardLayout): IExBind
   }
   return {
     sequence: sequence,
-    commandId: binding.commandId,
+    command: binding.command,
+    commandArgs: binding.commandArgs,
     selector: binding.selector,
     specificity: calculateSpecificity(binding.selector),
   };
@@ -393,8 +396,10 @@ function findSequenceMatches(bindings: IExBinding[], sequence: string[]): IMatch
   for (var i = 0, n = bindings.length; i < n; ++i) {
     var match = matchSequence(bindings[i], sequence);
     if (match === SequenceMatch.Exact) {
+      console.log("Exact match: " + bindings[i].toString());
       exact.push(bindings[i]);
     } else if (match === SequenceMatch.Partial) {
+      console.log("Partial match: " + bindings[i].toString());
       partial.push(bindings[i]);
     }
   }
@@ -429,14 +434,15 @@ function findBestMatch(bindings: IExBinding[], target: Element): IExBinding {
  * for the best matching keybinding. If a match is found, the command
  * is invoked and event propagation is stopped.
  */
-function dispatchBindings(bindings: IExBinding[], event: KeyboardEvent, commands: any): void {
+function dispatchBindings(bindings: IExBinding[], event: KeyboardEvent): void {
   var target = event.target as Element;
   while (target) {
     var match = findBestMatch(bindings, target);
     if (match) {
       event.preventDefault();
       event.stopPropagation();
-      commands.safeExecute(match.commandId, match.commandArgs);
+      console.log('EXECUTING');
+      match.command.execute(match.commandArgs);
       return;
     }
     if (target === event.currentTarget) {

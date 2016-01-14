@@ -69,7 +69,7 @@ function makeLogBinding(sequence: string[]): IKeyBinding {
   return {
     selector: '*',
     sequence: sequence,
-    commandId: "example:logHandler",
+    command: new DelegateCommand((args: any) => { logHandler(args); }),
     commandArgs: sequence
   };
 }
@@ -89,10 +89,6 @@ function createList(data: string[][]): HTMLElement {
  * The main application entry point.
  */
 function main(): void {
-
-  let command = new DelegateCommand((args: any) => {
-    logHandler.bind(void 0, args)
-  });
 
   // Create the key bindings for the shortcuts.
   var bindings = SHORTCUTS.map(makeLogBinding);
