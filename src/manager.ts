@@ -141,7 +141,7 @@ class KeymapManager {
    *
    * @returns `true` if the command is registered, `false` otherwise.
    */
-  has(command: ICommand): boolean {
+  hasCommand(command: ICommand): boolean {
     for (let i = 0; i < this._bindings.length; ++i) {
       if (this._bindings[i].command === command) {
         return true;
@@ -151,18 +151,20 @@ class KeymapManager {
   }
 
   /**
-   * Lookup a command.
+   * Retrieves the sequences registered for the given command.
    *
    * @param command - The command of interest.
    *
-   * @returns The string sequence for the command.
+   * @returns The string sequences for the command.
    */
-  get(command: ICommand): string[] {
+  getSequencesForCommand(command: ICommand): string[][] {
+    let result: string[][] = [];
     for (let i = 0; i < this._bindings.length; ++i) {
       if (this._bindings[i].command === command) {
-        return this._bindings[i].sequence;
+        result.push(this._bindings[i].sequence);
       }
     }
+    return result;
   }
 
   /**
