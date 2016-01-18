@@ -68,8 +68,11 @@ interface IKeyBinding {
 
   /**
    * The handler function to invoke when the key binding is matched.
+   *
+   * If the handler returns `true`, propagation stops. If the handler
+   * returns `false`, the next matching key binding will be invoked.
    */
-  handler: () => void;
+  handler: () => boolean;
 }
 
 
@@ -365,22 +368,16 @@ function findSequenceMatches(bindings: IExBinding[], sequence: string[]): IMatch
 
 
 /**
- * Find the best matching binding for the given target element.
+ * Find the bindings which match the given target element.
  *
- * Returns `undefined` if no matching binding is found.
+ * The matched bindings are ordered from highest to lowest specificity.
  */
-function findBestMatch(bindings: IExBinding[], target: Element): IExBinding {
-  var result: IExBinding = void 0;
-  for (var i = 0, n = bindings.length; i < n; ++i) {
-    var exb = bindings[i];
-    if (!matchesSelector(target, exb.selector)) {
-      continue;
-    }
-    if (!result || exb.specificity >= result.specificity) {
-      result = exb;
-    }
-  }
-  return result;
+function findOrderedMatches(bindings: IExBinding[], target: Element): IExBinding[] {
+  return bindings.filter(exb => {
+    return matchesSelector(target, exb.selector);
+  }).sort((a, b) => {
+    return b.specificity - a.specificity;
+  });
 }
 
 
@@ -394,12 +391,12 @@ function findBestMatch(bindings: IExBinding[], target: Element): IExBinding {
 function dispatchBindings(bindings: IExBinding[], event: KeyboardEvent): void {
   var target = event.target as Element;
   while (target) {
-    var match = findBestMatch(bindings, target);
-    if (match) {
-      event.preventDefault();
-      event.stopPropagation();
-      match.handler.call(void 0);
-      return;
+    for (let exb of findOrderedMatches(bindings, target)) {
+      if (exb.handler.call(void 0)) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
     }
     if (target === event.currentTarget) {
       return;
