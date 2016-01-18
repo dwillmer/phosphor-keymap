@@ -64,11 +64,11 @@ interface IKeyboardLayout {
  */
 export
 function keystrokeForKeydownEvent(event: KeyboardEvent, layout: IKeyboardLayout): string {
-  var keycap = layout.keycapForKeydownEvent(event);
+  let keycap = layout.keycapForKeydownEvent(event);
   if (!keycap) {
     return '';
   }
-  var mods = '';
+  let mods = '';
   if (event.metaKey && IS_MAC) {
     mods += 'Cmd ';
   }
@@ -117,14 +117,12 @@ function keystrokeForKeydownEvent(event: KeyboardEvent, layout: IKeyboardLayout)
  */
 export
 function normalizeKeystroke(keystroke: string, layout: IKeyboardLayout): string {
-  var keycap = '';
-  var alt = false;
-  var cmd = false;
-  var ctrl = false;
-  var shift = false;
-  var tokens = keystroke.trim().split(/\s+/);
-  for (var i = 0, n = tokens.length; i < n; ++i) {
-    var token = tokens[i];
+  let keycap = '';
+  let alt = false;
+  let cmd = false;
+  let ctrl = false;
+  let shift = false;
+  for (let token of keystroke.trim().split(/\s+/)) {
     if (token === 'Accel') {
       token = IS_MAC ? 'Cmd' : 'Ctrl';
     }
@@ -176,7 +174,7 @@ function normalizeKeystroke(keystroke: string, layout: IKeyboardLayout): string 
   if (!keycap) {
     throwKeystrokeError(keystroke, 'primary key not specified');
   }
-  var mods = '';
+  let mods = '';
   if (cmd) {
     mods += 'Cmd ';
   }
@@ -416,8 +414,8 @@ function throwKeystrokeError(keystroke: string, message: string): void {
  * Extract the key set from a code map.
  */
 function extractKeys(codes: CodeMap): KeySet {
-  var keys: KeySet = Object.create(null);
-  for (var c in codes) {
+  let keys: KeySet = Object.create(null);
+  for (let c in codes) {
     keys[codes[c]] = true;
   }
   return keys;

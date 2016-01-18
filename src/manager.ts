@@ -121,7 +121,7 @@ class KeymapManager {
    * Ambiguous key bindings are resolved with a timeout.
    */
   add(bindings: IKeyBinding[]): IDisposable {
-    var exbArray = bindings.map(binding => {
+    let exbArray = bindings.map(binding => {
       return createExBinding(binding, this._layout);
     }).filter(exBinding => !!exBinding);
     this._bindings = this._bindings.concat(exbArray);
@@ -144,7 +144,7 @@ class KeymapManager {
   processKeydownEvent(event: KeyboardEvent): void {
     // Get the canonical keystroke for the event. An empty string
     // indicates a keystroke which cannot be a valid key shortcut.
-    var keystroke = keystrokeForKeydownEvent(event, this._layout);
+    let keystroke = keystrokeForKeydownEvent(event, this._layout);
     if (!keystroke) {
       return;
     }
@@ -153,7 +153,7 @@ class KeymapManager {
     this._sequence.push(keystroke);
 
     // Find the exact and partial matches for the key sequence.
-    var matches = findSequenceMatches(this._bindings, this._sequence);
+    let matches = findSequenceMatches(this._bindings, this._sequence);
 
     // If there are no exact matches and no partial matches, clear
     // all pending state so the next key press starts from default.
@@ -228,7 +228,7 @@ class KeymapManager {
    * Handle the partial match timeout.
    */
   private _onPendingTimeout(): void {
-    var data = this._exactData;
+    let data = this._exactData;
     this._timer = 0;
     this._exactData = null;
     this._sequence.length = 0;
@@ -327,20 +327,20 @@ const enum SequenceMatch { None, Exact, Partial };
 
 
 /**
- * Test whether an ex binding matches a key sequence.
+ * Test whether an ex-binding sequence matches a key sequence.
  *
  * Returns a `SequenceMatch` value indicating the type of match.
  */
-function matchSequence(exb: IExBinding, sequence: string[]): SequenceMatch {
-  if (exb.sequence.length < sequence.length) {
+function matchSequence(exbSeq: string[], keySeq: string[]): SequenceMatch {
+  if (exbSeq.length < keySeq.length) {
     return SequenceMatch.None;
   }
-  for (var i = 0, n = sequence.length; i < n; ++i) {
-    if (exb.sequence[i] !== sequence[i]) {
+  for (let i = 0, n = keySeq.length; i < n; ++i) {
+    if (exbSeq[i] !== keySeq[i]) {
       return SequenceMatch.None;
     }
   }
-  if (exb.sequence.length > sequence.length) {
+  if (exbSeq.length > keySeq.length) {
     return SequenceMatch.Partial;
   }
   return SequenceMatch.Exact;
@@ -353,14 +353,14 @@ function matchSequence(exb: IExBinding, sequence: string[]): SequenceMatch {
  * Returns a match result which contains the exact and partial matches.
  */
 function findSequenceMatches(bindings: IExBinding[], sequence: string[]): IMatchResult {
-  var exact: IExBinding[] = [];
-  var partial: IExBinding[] = [];
-  for (var i = 0, n = bindings.length; i < n; ++i) {
-    var match = matchSequence(bindings[i], sequence);
+  let exact: IExBinding[] = [];
+  let partial: IExBinding[] = [];
+  for (let exb of bindings) {
+    let match = matchSequence(exb.sequence, sequence);
     if (match === SequenceMatch.Exact) {
-      exact.push(bindings[i]);
+      exact.push(exb);
     } else if (match === SequenceMatch.Partial) {
-      partial.push(bindings[i]);
+      partial.push(exb);
     }
   }
   return { exact: exact, partial: partial };
@@ -389,7 +389,7 @@ function findOrderedMatches(bindings: IExBinding[], target: Element): IExBinding
  * is invoked and event propagation is stopped.
  */
 function dispatchBindings(bindings: IExBinding[], event: KeyboardEvent): void {
-  var target = event.target as Element;
+  let target = event.target as Element;
   while (target) {
     for (let exb of findOrderedMatches(bindings, target)) {
       if (exb.handler.call(void 0)) {
@@ -407,20 +407,12 @@ function dispatchBindings(bindings: IExBinding[], event: KeyboardEvent): void {
 
 
 /**
- * Test whether an element matches a CSS selector.
- */
-function matchesSelector(elem: Element, selector: string): boolean {
-  return protoMatchFunc.call(elem, selector);
-}
-
-
-/**
  * A cross-browser CSS selector matching prototype function.
  *
  * This function must be called with an element as `this` context.
  */
-var protoMatchFunc: Function = (() => {
-  var proto = Element.prototype as any;
+const protoMatchFunc: Function = (() => {
+  let proto = Element.prototype as any;
   return (
     proto.matches ||
     proto.matchesSelector ||
@@ -429,9 +421,17 @@ var protoMatchFunc: Function = (() => {
     proto.oMatchesSelector ||
     proto.webkitMatchesSelector ||
     (function(selector: string) {
-      var elem = this as Element;
-      var matches = elem.ownerDocument.querySelectorAll(selector);
+      let elem = this as Element;
+      let matches = elem.ownerDocument.querySelectorAll(selector);
       return Array.prototype.indexOf.call(matches, elem) !== -1;
     })
   );
 })();
+
+
+/**
+ * Test whether an element matches a CSS selector.
+ */
+function matchesSelector(elem: Element, selector: string): boolean {
+  return protoMatchFunc.call(elem, selector);
+}
