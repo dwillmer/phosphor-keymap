@@ -129,6 +129,39 @@ class KeymapManager {
   }
 
   /**
+   * Test whether an id is registered.
+   *
+   * @param id - The id of interest.
+   *
+   * @returns `true` if the id is registered, `false` otherwise.
+   */
+  hasHandler(handler: () => boolean): boolean {
+    for (let i = 0; i < this._bindings.length; ++i) {
+      if (this._bindings[i].handler === handler) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Retrieves the sequences registered for the given id.
+   *
+   * @param handler - The handler of interest.
+   *
+   * @returns The string sequences for the id.
+   */
+  getSequencesForHandler(handler: () => boolean): string[][] {
+    let result: string[][] = [];
+    for (let i = 0; i < this._bindings.length; ++i) {
+      if (this._bindings[i].handler === handler) {
+        result.push(this._bindings[i].sequence);
+      }
+    }
+    return result;
+  }
+
+  /**
    * Process a `'keydown'` event and invoke a matching key binding.
    *
    * @param event - The event object for a `'keydown'` event.
